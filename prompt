@@ -1,0 +1,129 @@
+write an excellent AI prompt about an Arabic website called samma(sky) its an Arabic digital games store were people can create accounts and login and sell(games(paypal only)) and buy(games(by using paypal)) and rate(game stars 10 max) and comment(on game pages). every game has a page and in the stores front page there are categories for every game and also tags for every game and the users can market there games via bedding on tags and/or categories and you get ahead of other game ads by giving a higher bedding compared to other bidders. basically players can bid on percentages of there game sale share(5% or more(5% is the minimum for listing the game on the website)). every game on the website is an ad and depending on how much the user decided to share with us(sale percentage) and how much is the rating of the game(how many stars) and how many comments it has the game position on its tags and categories increase or decrease. this prompt i am going to give to an ai coder to generate code. so be technically fucused and accurate, also focuse on features, also focuse on security, also focuse on performance.
+
+
+
+
+
+
+
+
+
+
+Prompt for AI Coder:
+
+Project Title:
+Develop an Arabic Digital Games Store – Samma (Sky)
+
+Overview:
+Create a fully functional web application for an Arabic digital games marketplace where users can register, log in, and manage their accounts. The platform enables users to buy and sell digital games exclusively via PayPal. Each game is showcased on its dedicated page with features such as ratings (up to 10 stars), comments, categorization, and tagging. In addition, users can boost their game’s visibility by bidding on a percentage of their game’s sale share (minimum bid is 5%), which affects the placement of the game within its respective tags and categories. The higher the bid, the better the ad position. Furthermore, the final ranking of every game’s ad is determined by a combination of the bid percentage (i.e., the share offered), the game’s rating, and the number of comments.
+
+Core Features:
+
+User Management:
+
+Account Creation & Authentication:
+Secure user registration and login system.
+Support for password hashing, email verification, and secure session management.
+User Profiles:
+Profile editing.
+History of game listings, bids, ratings, and comments.
+Game Listing & Management:
+
+Game Pages:
+Each game should have its own detailed page with information, screenshots, and downloadable files.
+Selling and Buying:
+Integration with PayPal for processing both purchases and sales.
+Automated handling of transactions, including escrow-like management where a percentage of the sale (bid amount) is retained by the platform.
+Bidding System for Game Ads:
+Users can bid a minimum of 5% of their game’s sale share to list their game.
+Allow bidding on categories and tags. The game’s ad placement is dynamic and adjusts based on the bid amount relative to others.
+Ranking algorithm that factors in:
+Bid percentage (sale share offered).
+Game rating (out of 10 stars).
+Number of user comments.
+Provide an administrative dashboard to monitor active bids and ad positions.
+Game Interaction:
+
+Rating System:
+Users can rate each game up to 10 stars.
+Display an aggregate rating on each game’s page.
+Comment System:
+Users can post comments on game pages.
+Implement threading or reply support if needed.
+Include moderation tools to filter inappropriate content.
+Categorization and Tagging:
+
+Front Page Organization:
+Display various categories for games.
+Tag each game with relevant keywords.
+Allow users to search/filter games by category and tag.
+Bidding Integration:
+Within each category/tag, game ad positions are dynamically ordered based on the bidding system along with ratings and comment counts.
+Technical Requirements:
+
+Architecture & Framework:
+
+Use a modular, MVC (or similar) design pattern.
+You may choose a robust web framework (e.g., Django, Flask, Express.js, Ruby on Rails) that supports scalability and maintainability.
+Ensure clean API design (RESTful or GraphQL) for possible future integrations and a responsive front-end.
+Database:
+
+Use a relational database (e.g., PostgreSQL, MySQL) for transactional data (users, games, bids, ratings, comments).
+Implement proper indexing and query optimization for performance.
+Consider using caching (Redis or similar) for frequently accessed data such as game listings and rankings.
+Payment Integration:
+
+Integrate PayPal’s API for all transactions.
+Ensure secure handling of payment data and transaction status updates.
+Implement webhook listeners to update order status in real-time.
+Security Requirements:
+
+Authentication & Authorization:
+
+Use secure password storage (e.g., bcrypt or Argon2).
+Implement multi-factor authentication (optional but recommended).
+Enforce role-based access control (RBAC) for user accounts and administrative functions.
+Input Validation & Data Sanitization:
+
+Validate all user inputs on both client and server sides.
+Protect against common vulnerabilities: XSS, CSRF, SQL Injection, etc.
+Use prepared statements and ORM features to interact with the database securely.
+Session Management & Data Protection:
+
+Utilize secure cookies with HTTPOnly and Secure flags.
+Implement proper session expiration and renewal policies.
+Use HTTPS throughout the application.
+Payment Security:
+
+Ensure that all payment interactions with PayPal are conducted over secure channels.
+Do not store sensitive payment information on your servers.
+Performance Considerations:
+
+Efficient Querying & Caching:
+
+Optimize database queries, especially for dynamic ad ranking.
+Use caching strategies (e.g., Redis) for high-traffic endpoints like the front page and game details.
+Consider asynchronous processing for non-critical operations (e.g., sending notifications, processing bids).
+Scalability:
+
+Design the system with scalability in mind (e.g., microservices or modular components).
+Ensure that the bidding algorithm and ad ranking system are optimized to handle high loads.
+Employ load balancing and horizontal scaling if necessary.
+Front-End Optimization:
+
+Ensure a responsive, mobile-friendly design.
+Optimize asset delivery (minify CSS/JS, use CDNs for static content).
+Additional Requirements:
+
+Documentation & Testing:
+
+Provide comprehensive code documentation and API documentation.
+Implement unit, integration, and end-to-end tests.
+Use CI/CD pipelines for automated testing and deployment.
+Localization & Internationalization:
+
+Ensure the UI is fully in Arabic (with proper RTL support).
+Consider future-proofing for additional language support if needed.
+Task Summary:
+Generate a complete, production-ready codebase that implements the above features and requirements for the Samma (Sky) digital games store. The solution must emphasize security, performance, and a clean, maintainable code architecture. Ensure that the bidding system is robust and integrates seamlessly with the overall game listing and ranking logic. Provide detailed inline comments and separate documentation that explains the architecture, API endpoints, and key components.
+
