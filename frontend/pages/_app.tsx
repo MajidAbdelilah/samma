@@ -1,7 +1,7 @@
 import React from 'react';
 import { AppProps } from 'next/app';
 import { ChakraProvider } from '@chakra-ui/react';
-import { theme } from '../theme';
+import { theme } from '../theme/index';
 import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import RTLProvider from '../components/RTLProvider';
 import { AuthProvider } from '../hooks/useAuth';
