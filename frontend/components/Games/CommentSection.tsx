@@ -38,7 +38,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ gameId }) => {
   const fetchComments = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/games/comments/?game=${gameId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/games/comments/?game=${gameId}`, {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
@@ -75,7 +75,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ gameId }) => {
   const getCsrfToken = async (): Promise<string> => {
     try {
       // First, make a GET request to get a new CSRF token
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/core/csrf/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/core/csrf/`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -110,7 +110,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ gameId }) => {
       // Get a fresh CSRF token
       const csrfToken = await getCsrfToken();
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/games/comments/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/games/comments/`, {
         method: 'POST',
         credentials: 'include',
         headers: {

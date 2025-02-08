@@ -36,25 +36,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts/profile/`, {
+      console.log('Checking auth status...');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/accounts/profile/`, {
         method: 'GET',
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
-          'Content-Type': 'application/json',
         },
       });
 
+      console.log('Auth status response:', response.status);
+      
       if (response.ok) {
         const userData = await response.json();
+        console.log('User data:', userData);
         setUser(userData);
         setIsAuthenticated(true);
       } else {
+        console.log('Auth check failed:', await response.text());
         setUser(null);
         setIsAuthenticated(false);
       }
     } catch (error) {
-      console.error('Error checking auth status:', error);
+      console.error('Auth check error:', error);
       setUser(null);
       setIsAuthenticated(false);
     }
@@ -66,22 +70,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts/login/`, {
+      console.log('Attempting login...');
+      
+      // First, get a fresh CSRF token
+      const csrfResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/core/csrf/`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!csrfResponse.ok) {
+        const csrfError = await csrfResponse.json();
+        throw new Error(csrfError.detail || 'Failed to get CSRF token');
+      }
+
+      // Get the CSRF token from the response
+      const csrfData = await csrfResponse.json();
+      const csrfToken = csrfData.csrfToken;
+      
+      if (!csrfToken) {
+        throw new Error('CSRF token not found in response');
+      }
+
+      console.log('Got CSRF token:', csrfToken);
+
+      // Now make the login request with the CSRF token
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/accounts/login/`, {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
         },
         body: JSON.stringify({ email, password }),
       });
 
+      console.log('Login response:', response.status);
+
       if (!response.ok) {
         const error = await response.json();
+        console.error('Login failed:', error);
         throw new Error(error.message || 'Login failed');
       }
 
-      await checkAuthStatus(); // Fetch the user data after successful login
+      const data = await response.json();
+      console.log('Login successful:', data);
+
+      // Immediately check auth status after successful login
+      await checkAuthStatus();
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -91,12 +130,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       // First, get a fresh CSRF token
-      const csrfResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/core/csrf/`, {
+      const csrfResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/core/csrf/`, {
         method: 'GET',
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
-          'Content-Type': 'application/json',
         },
       });
 
@@ -105,13 +143,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // Get the CSRF token from the response
-      const csrfToken = await csrfResponse.json().then(data => data.csrfToken);
+      const csrfData = await csrfResponse.json();
+      const csrfToken = csrfData.csrfToken;
+      
       if (!csrfToken) {
         throw new Error('CSRF token not found in response');
       }
 
       // Now make the logout request with the CSRF token
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts/logout/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/accounts/logout/`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -136,12 +176,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (username: string, email: string, password: string) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts/register/`, {
+      // First, get a fresh CSRF token
+      const csrfResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/core/csrf/`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!csrfResponse.ok) {
+        const csrfError = await csrfResponse.json();
+        throw new Error(csrfError.detail || 'Failed to get CSRF token');
+      }
+
+      // Get the CSRF token from the response
+      const csrfData = await csrfResponse.json();
+      const csrfToken = csrfData.csrfToken;
+      
+      if (!csrfToken) {
+        throw new Error('CSRF token not found in response');
+      }
+
+      console.log('Got CSRF token:', csrfToken);
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/accounts/register/`, {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
         },
         body: JSON.stringify({ email, password, username }),
       });

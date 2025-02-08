@@ -96,9 +96,16 @@ const CreateGame = () => {
     const init = async () => {
       if (typeof window !== 'undefined') {
         if (!isAuthenticated) {
+          toast({
+            title: 'خطأ',
+            description: 'يجب تسجيل الدخول أولاً',
+            status: 'error',
+            duration: 3000,
+          });
           router.replace('/login');
           return;
         }
+
         try {
           const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/games/categories/`, {
             method: 'GET',
@@ -109,7 +116,9 @@ const CreateGame = () => {
           });
           
           if (!response.ok) {
-            throw new Error('Failed to fetch categories');
+            const errorData = await response.json();
+            console.error('Categories fetch error:', errorData);
+            throw new Error(errorData.detail || 'Failed to fetch categories');
           }
           
           const data = await response.json();
@@ -122,10 +131,13 @@ const CreateGame = () => {
           console.error('Failed to fetch categories:', error);
           toast({
             title: 'خطأ',
-            description: 'فشل في تحميل التصنيفات',
+            description: error instanceof Error ? error.message : 'فشل في تحميل التصنيفات',
             status: 'error',
             duration: 3000,
           });
+          if (error instanceof Error && error.message.includes('Unauthorized')) {
+            router.replace('/login');
+          }
         }
         setIsPageLoading(false);
       }
@@ -245,7 +257,7 @@ const CreateGame = () => {
       // Add release date (current date)
       formDataToSend.append('release_date', new Date().toISOString().split('T')[0]);
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/games/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/games`, {
         method: 'POST',
         credentials: 'include',
         headers: {

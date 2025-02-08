@@ -41,7 +41,7 @@ const Register: NextPage = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts/register/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/accounts/register/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -106,14 +106,14 @@ const Home: NextPage = () => {
     const fetchData = async () => {
       try {
         // Fetch featured games
-        const gamesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/games/top-games/?metric=rating`, {
+        const gamesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/games/top-games/?metric=rating`, {
           credentials: 'include',
         });
         const gamesData = await gamesResponse.json();
         setFeaturedGames(gamesData.results || []);
 
         // Fetch categories
-        const categoriesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/games/categories/`, {
+        const categoriesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/games/categories/`, {
           credentials: 'include',
         });
         const categoriesData = await categoriesResponse.json();

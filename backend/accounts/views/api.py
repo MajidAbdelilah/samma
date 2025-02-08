@@ -122,6 +122,8 @@ class UserRegistrationView(APIView):
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+            # Explicitly set the backend before login
+            user.backend = 'django.contrib.auth.backends.ModelBackend'
             login(request, user)  # Log the user in after registration
             return Response({
                 'message': 'Registration successful',

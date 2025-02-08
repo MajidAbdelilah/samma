@@ -50,7 +50,7 @@ const Dashboard: React.FC = () => {
     const fetchData = async () => {
       try {
         // Fetch user statistics
-        const statsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts/statistics/`, {
+        const statsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/accounts/statistics/`, {
           credentials: 'include',
           headers: {
             'Accept': 'application/json',
@@ -66,7 +66,7 @@ const Dashboard: React.FC = () => {
         setUserStats(statsData);
 
         // Fetch user's games
-        const gamesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts/my-games/`, {
+        const gamesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/accounts/my-games/`, {
           credentials: 'include',
           headers: {
             'Accept': 'application/json',
