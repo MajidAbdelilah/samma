@@ -104,13 +104,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Failed to get CSRF token');
       }
 
-      // Get the CSRF token from cookies
-      const cookies = document.cookie.split(';');
-      const csrfCookie = cookies.find(cookie => cookie.trim().startsWith('csrftoken='));
-      if (!csrfCookie) {
-        throw new Error('CSRF token not found');
+      // Get the CSRF token from the response
+      const csrfToken = await csrfResponse.json().then(data => data.csrfToken);
+      if (!csrfToken) {
+        throw new Error('CSRF token not found in response');
       }
-      const csrfToken = decodeURIComponent(csrfCookie.split('=')[1].trim());
 
       // Now make the logout request with the CSRF token
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts/logout/`, {

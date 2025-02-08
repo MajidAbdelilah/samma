@@ -50,6 +50,12 @@ interface GameFormData {
   };
 }
 
+interface Category {
+  id: number;
+  name: string;
+  slug: string;
+}
+
 const CreateGame = () => {
   const { isAuthenticated, user } = useAuth();
   const router = useRouter();
@@ -57,6 +63,7 @@ const CreateGame = () => {
   const [loading, setLoading] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [mainImagePreview, setMainImagePreview] = useState<string>('');
+  const [categories, setCategories] = useState<Category[]>([]);
   
   const [formData, setFormData] = useState<GameFormData>({
     title: '',
@@ -85,15 +92,46 @@ const CreateGame = () => {
   });
 
   useEffect(() => {
-    // Check authentication status
-    if (typeof window !== 'undefined') {
-      if (!isAuthenticated) {
-        router.push('/login');
-      } else {
+    // Check authentication status and fetch categories
+    const init = async () => {
+      if (typeof window !== 'undefined') {
+        if (!isAuthenticated) {
+          router.replace('/login');
+          return;
+        }
+        try {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/games/categories/`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+              'Accept': 'application/json',
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch categories');
+          }
+          
+          const data = await response.json();
+          if (data.results) {
+            setCategories(data.results);
+          } else {
+            setCategories([]);
+          }
+        } catch (error) {
+          console.error('Failed to fetch categories:', error);
+          toast({
+            title: 'خطأ',
+            description: 'فشل في تحميل التصنيفات',
+            status: 'error',
+            duration: 3000,
+          });
+        }
         setIsPageLoading(false);
       }
-    }
-  }, [isAuthenticated, router]);
+    };
+    init();
+  }, [isAuthenticated, router, toast]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -149,15 +187,43 @@ const CreateGame = () => {
     e.preventDefault();
     setLoading(true);
 
+    if (!isAuthenticated) {
+      toast({
+        title: 'خطأ',
+        description: 'يجب تسجيل الدخول أولاً',
+        status: 'error',
+        duration: 3000,
+      });
+      router.push('/login');
+      return;
+    }
+
     try {
+      // Get CSRF token first
+      const csrfResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/core/csrf/`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!csrfResponse.ok) {
+        const csrfError = await csrfResponse.json();
+        throw new Error(csrfError.detail || 'Failed to get CSRF token');
+      }
+
+      const { csrfToken } = await csrfResponse.json();
+      
       const formDataToSend = new FormData();
       
       // Handle basic fields
       formDataToSend.append('title', formData.title);
       formDataToSend.append('description', formData.description);
       formDataToSend.append('price', formData.price);
-      formDataToSend.append('category', formData.category);
+      formDataToSend.append('category_id', formData.category);
       formDataToSend.append('version', formData.version);
+      formDataToSend.append('tag_ids', JSON.stringify([])); // Empty array for now
       
       // Handle files
       if (formData.mainImage) {
@@ -173,15 +239,26 @@ const CreateGame = () => {
         recommended: formData.systemRequirements.recommended
       }));
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/games/`, {
+      // Add default bid percentage
+      formDataToSend.append('bid_percentage', '5.0');
+
+      // Add release date (current date)
+      formDataToSend.append('release_date', new Date().toISOString().split('T')[0]);
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/games/`, {
         method: 'POST',
         credentials: 'include',
+        headers: {
+          'X-CSRFToken': csrfToken,
+          'Accept': 'application/json',
+        },
         body: formDataToSend,
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to create game');
+        const errorData = await response.json();
+        console.error('Error creating game:', errorData);
+        throw new Error(errorData.detail || JSON.stringify(errorData));
       }
 
       const data = await response.json();
@@ -192,7 +269,7 @@ const CreateGame = () => {
         duration: 3000,
       });
 
-      router.push(`/games/${data.id}`);
+      router.push(`/games/${data.slug}`);
     } catch (error) {
       toast({
         title: 'خطأ',
@@ -272,12 +349,11 @@ const CreateGame = () => {
                     onChange={handleInputChange}
                     placeholder="اختر تصنيفاً"
                   >
-                    <option value="action">ألعاب الأكشن</option>
-                    <option value="adventure">ألعاب المغامرات</option>
-                    <option value="rpg">ألعاب تقمص الأدوار</option>
-                    <option value="strategy">ألعاب الاستراتيجية</option>
-                    <option value="sports">ألعاب رياضية</option>
-                    <option value="simulation">ألعاب المحاكاة</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
                   </Select>
                 </FormControl>
               </SimpleGrid>

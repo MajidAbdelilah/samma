@@ -10,12 +10,48 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         self.stdout.write('Creating test data...')
 
-        # Create category
-        category, created = Category.objects.get_or_create(
-            name='Action',
-            defaults={'description': 'Action games'}
-        )
-        self.stdout.write(f'{"Created" if created else "Found"} category: Action')
+        # Create categories
+        categories = [
+            {
+                'name': 'Action',
+                'description': 'Action and fighting games',
+            },
+            {
+                'name': 'Adventure',
+                'description': 'Adventure and exploration games',
+            },
+            {
+                'name': 'RPG',
+                'description': 'Role-playing games',
+            },
+            {
+                'name': 'Strategy',
+                'description': 'Strategy and tactical games',
+            },
+            {
+                'name': 'Sports',
+                'description': 'Sports and racing games',
+            },
+            {
+                'name': 'Simulation',
+                'description': 'Simulation and management games',
+            },
+            {
+                'name': 'Puzzle',
+                'description': 'Puzzle and logic games',
+            },
+            {
+                'name': 'Casual',
+                'description': 'Casual and family games',
+            },
+        ]
+
+        for cat_data in categories:
+            category, created = Category.objects.get_or_create(
+                name=cat_data['name'],
+                defaults={'description': cat_data['description']}
+            )
+            self.stdout.write(f'{"Created" if created else "Found"} category: {category.name}')
 
         # Get or create test user
         user = User.objects.first()
@@ -30,7 +66,7 @@ class Command(BaseCommand):
                 'description': 'A test game for development',
                 'seller': user,
                 'price': Decimal('29.99'),
-                'category': category,
+                'category': Category.objects.first(),
                 'main_image': 'game_images/test.jpg',
                 'game_file': 'game_files/test.zip',
                 'version': '1.0',

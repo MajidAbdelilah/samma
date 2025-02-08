@@ -220,6 +220,12 @@ CSRF_TRUSTED_ORIGINS = [
     'https://127.0.0.1:8443',
 ]
 
+# Add CSRF exempt for development
+CSRF_EXEMPT_URLS = [
+    r'^/api/v1/accounts/login/$',
+    r'^/api/v1/accounts/register/$',
+]
+
 # CORS settings
 CORS_ORIGIN_ALLOW_ALL = False
 CORS_ALLOWED_ORIGINS = [
@@ -238,13 +244,6 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
-]
-
-# Add CSRF exempt for development
-CSRF_EXEMPT_URLS = [
-    r'^/api/v1/accounts/login/$',
-    r'^/api/v1/accounts/register/$',
-    r'^/api/v1/core/csrf/$',
 ]
 
 # Authentication settings

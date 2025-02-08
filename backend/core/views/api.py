@@ -303,4 +303,8 @@ class GetCSRFToken(APIView):
     permission_classes = [AllowAny]
     
     def get(self, request, *args, **kwargs):
-        return JsonResponse({'detail': 'CSRF cookie set'}) 
+        from django.middleware.csrf import get_token
+        return JsonResponse({
+            'detail': 'CSRF cookie set',
+            'csrfToken': get_token(request)
+        }) 
