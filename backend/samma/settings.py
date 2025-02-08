@@ -220,7 +220,6 @@ SESSION_COOKIE_DOMAIN = None
 # For development only
 if DEBUG:
     CORS_ORIGIN_ALLOW_ALL = True
-    CORS_REPLACE_HTTPS_REFERER = True
     CSRF_TRUSTED_ORIGINS = [
         'http://localhost:3000',
         'https://localhost:3000',
