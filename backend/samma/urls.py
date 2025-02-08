@@ -23,7 +23,7 @@ from django.utils.translation import gettext_lazy as _
 
 # API URLs
 api_patterns = [
-    path('accounts/', include('accounts.urls.api', namespace='accounts')),
+    path('accounts/', include('accounts.urls.api')),
     path('games/', include('games.urls.api', namespace='games')),
     path('payments/', include('payments.urls.api', namespace='payments')),
     path('core/', include('core.urls.api', namespace='core')),

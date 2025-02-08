@@ -7,7 +7,7 @@ from accounts.views.api import (
     UserStatisticsAPIView,
     UserRegistrationView,
     LoginView,
-    LogoutView,
+    logout_view,
 )
 
 app_name = 'accounts'
@@ -21,5 +21,5 @@ urlpatterns = [
     path('statistics/', UserStatisticsAPIView.as_view(), name='user-statistics'),
     path('register/', UserRegistrationView.as_view(), name='register'),
     path('login/', LoginView.as_view(), name='login'),
-    path('logout/', LogoutView.as_view(), name='logout'),
+    path('logout/', logout_view, name='logout'),
 ] + router.urls 
