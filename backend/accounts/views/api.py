@@ -1,9 +1,11 @@
 from rest_framework import viewsets, generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, authenticate, login, logout
 from django.db.models import Count, Sum, Avg
 from django.utils.translation import gettext_lazy as _
+from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
+from django.utils.decorators import method_decorator
 from accounts.serializers.user import (
     UserSerializer,
     UserProfileSerializer,
@@ -65,6 +67,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+@method_decorator(ensure_csrf_cookie, name='dispatch')
 class UserProfileAPIView(generics.RetrieveUpdateAPIView):
     """
     API view for retrieving and updating user profile
@@ -109,6 +112,7 @@ class UserStatisticsAPIView(generics.RetrieveAPIView):
         return User.objects.filter(id=self.request.user.id)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class UserRegistrationView(APIView):
     permission_classes = [AllowAny]
     
@@ -116,8 +120,49 @@ class UserRegistrationView(APIView):
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+            login(request, user)  # Log the user in after registration
             return Response({
                 'message': 'Registration successful',
-                'user_id': user.id
+                'user': UserProfileSerializer(user).data
             }, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        email = request.data.get('email')
+        password = request.data.get('password')
+        
+        if not email or not password:
+            return Response({
+                'message': 'Please provide both email and password'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user = User.objects.get(email=email)
+            if user.check_password(password):
+                login(request, user)
+                return Response({
+                    'message': 'Login successful',
+                    'user': UserProfileSerializer(user).data
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    'message': 'Invalid credentials'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+        except User.DoesNotExist:
+            return Response({
+                'message': 'Invalid credentials'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class LogoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        logout(request)
+        return Response({'message': 'Logged out successfully'}, status=status.HTTP_200_OK) 

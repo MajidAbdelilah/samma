@@ -17,4 +17,5 @@ celery==5.3.6
 django-celery-beat==2.5.0
 django-celery-results==2.5.1
 psutil==5.9.8
-Werkzeug==3.0.1 
+Werkzeug==3.0.1
+django-debug-toolbar==4.2.0 

@@ -1,5 +1,5 @@
 import type { FormEvent, ChangeEvent } from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { NextPage } from 'next';
 import {
   Box,
@@ -15,63 +15,42 @@ import {
 } from '@chakra-ui/react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { useAuth } from '../hooks/useAuth';
 
-const Register: NextPage = () => {
+const Login: NextPage = () => {
   const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const toast = useToast();
   const router = useRouter();
+  const { login, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [isAuthenticated, router]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    if (password !== confirmPassword) {
+    setIsLoading(true);
+
+    try {
+      await login(email, password);
+      
       toast({
-        title: 'Error',
-        description: 'Passwords do not match',
-        status: 'error',
+        title: 'Success',
+        description: 'Login successful!',
+        status: 'success',
         duration: 3000,
         isClosable: true,
       });
-      return;
-    }
 
-    setIsLoading(true);
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts/register/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          email,
-          username,
-          password,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Registration failed');
-      }
-
-      toast({
-        title: 'Success',
-        description: 'Registration successful! Please check your email for verification.',
-        status: 'success',
-        duration: 5000,
-        isClosable: true,
-      });
-
-      router.push('/login');
+      router.push('/dashboard');
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Registration failed. Please try again.',
+        description: error instanceof Error ? error.message : 'Login failed. Please try again.',
         status: 'error',
         duration: 3000,
         isClosable: true,
@@ -88,7 +67,7 @@ const Register: NextPage = () => {
   return (
     <Container maxW="container.sm" py={10}>
       <VStack spacing={8}>
-        <Heading>Register</Heading>
+        <Heading>Login</Heading>
         <Box as="form" onSubmit={handleSubmit} width="100%">
           <VStack spacing={4}>
             <FormControl isRequired>
@@ -101,28 +80,11 @@ const Register: NextPage = () => {
             </FormControl>
 
             <FormControl isRequired>
-              <FormLabel>Username</FormLabel>
-              <Input
-                value={username}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange(e, setUsername)}
-              />
-            </FormControl>
-
-            <FormControl isRequired>
               <FormLabel>Password</FormLabel>
               <Input
                 type="password"
                 value={password}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange(e, setPassword)}
-              />
-            </FormControl>
-
-            <FormControl isRequired>
-              <FormLabel>Confirm Password</FormLabel>
-              <Input
-                type="password"
-                value={confirmPassword}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange(e, setConfirmPassword)}
               />
             </FormControl>
 
@@ -132,14 +94,14 @@ const Register: NextPage = () => {
               width="100%"
               isLoading={isLoading}
             >
-              Register
+              Login
             </Button>
 
             <Text>
-              Already have an account?{' '}
-              <Link href="/login">
+              Don't have an account?{' '}
+              <Link href="/register">
                 <Text as="span" color="blue.500">
-                  Login here
+                  Register here
                 </Text>
               </Link>
             </Text>
@@ -150,4 +112,4 @@ const Register: NextPage = () => {
   );
 };
 
-export default Register; 
+export default Login; 

@@ -6,6 +6,8 @@ from accounts.views.api import (
     UserGamesAPIView,
     UserStatisticsAPIView,
     UserRegistrationView,
+    LoginView,
+    LogoutView,
 )
 
 app_name = 'accounts'
@@ -18,4 +20,6 @@ urlpatterns = [
     path('my-games/', UserGamesAPIView.as_view(), name='user-games'),
     path('statistics/', UserStatisticsAPIView.as_view(), name='user-statistics'),
     path('register/', UserRegistrationView.as_view(), name='register'),
+    path('login/', LoginView.as_view(), name='login'),
+    path('logout/', LogoutView.as_view(), name='logout'),
 ] + router.urls 

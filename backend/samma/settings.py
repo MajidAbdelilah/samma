@@ -29,7 +29,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-k3l=l_*2u%l$(8@tf&#x^n$d5vrj&6zfi8c*5wqyuouewxjjwp')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+DEBUG = True
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'storages',
+    'debug_toolbar',  # Django Debug Toolbar
     
     # Local apps
     'accounts.apps.AccountsConfig',
@@ -67,6 +68,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',  # CORS middleware
+    'debug_toolbar.middleware.DebugToolbarMiddleware',  # Debug Toolbar middleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',  # For internationalization
     'django.middleware.common.CommonMiddleware',
@@ -203,14 +205,67 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
 }
 
+# Cookie settings
+SESSION_COOKIE_SECURE = False  # Set to False for development
+CSRF_COOKIE_SECURE = False    # Set to False for development
+SESSION_COOKIE_SAMESITE = 'Lax'  # Changed from 'None' to 'Lax' for better compatibility
+CSRF_COOKIE_SAMESITE = 'Lax'    # Changed from 'None' to 'Lax' for better compatibility
+CSRF_USE_SESSIONS = True       # Changed to True to store CSRF token in session
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_NAME = 'csrftoken'
+CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
+CSRF_COOKIE_DOMAIN = None
+SESSION_COOKIE_DOMAIN = None
+
+# For development only
+if DEBUG:
+    CORS_ORIGIN_ALLOW_ALL = True
+    CORS_REPLACE_HTTPS_REFERER = True
+    CSRF_TRUSTED_ORIGINS = [
+        'http://localhost:3000',
+        'https://localhost:3000',
+        'http://localhost:8443',
+        'https://localhost:8443',
+        'http://127.0.0.1:8443',
+        'https://127.0.0.1:8443',
+    ]
+
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'https://localhost:3000',
-    'http://localhost',
-    'https://localhost'
+    'http://localhost:8443',
+    'https://localhost:8443',
+    'http://127.0.0.1:8443',
+    'https://127.0.0.1:8443',
 ]
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = True  # For development only
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# Add CSRF exempt for development
+CSRF_EXEMPT_URLS = [
+    r'^/api/v1/accounts/register/$',
+    r'^/api/v1/accounts/login/$',
+]
 
 # Authentication settings
 AUTH_USER_MODEL = 'accounts.User'
@@ -268,5 +323,9 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_HSTS_SECONDS = 31536000  # 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+
+# Debug Toolbar settings
+INTERNAL_IPS = [
+    '127.0.0.1',
+    'localhost',
+]

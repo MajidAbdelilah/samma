@@ -1,121 +1,170 @@
-import React from 'react';
-import { GetServerSideProps } from 'next';
+import type { NextPage } from 'next';
 import {
   Box,
   Container,
-  Grid,
   Heading,
+  Text,
+  SimpleGrid,
+  Button,
+  VStack,
   HStack,
-  Select,
-  Input,
-  IconButton,
+  Image,
+  useColorModeValue,
+  Flex,
+  Icon,
+  Link as ChakraLink,
 } from '@chakra-ui/react';
-import { SearchIcon } from '@chakra-ui/icons';
-import MainLayout from '../components/Layout/MainLayout';
-import GameCard from '../components/Games/GameCard';
-import CategoryTabs from '../components/Games/CategoryTabs';
-import { Game, Category } from '../types';
+import NextLink from 'next/link';
+import { FaGamepad, FaSearch, FaShoppingCart, FaStar } from 'react-icons/fa';
+import { useAuth } from '../hooks/useAuth';
 
-interface HomeProps {
-  games: Game[];
-  categories: Category[];
-  featuredGames: Game[];
-}
+const Feature = ({ icon, title, text }: { icon: any; title: string; text: string }) => {
+  return (
+    <VStack
+      align="center"
+      p={6}
+      bg={useColorModeValue('white', 'gray.800')}
+      rounded="xl"
+      shadow="md"
+      borderWidth="1px"
+      spacing={4}
+    >
+      <Icon as={icon} w={10} h={10} color="blue.500" />
+      <Text fontWeight="bold" fontSize="xl" textAlign="center">
+        {title}
+      </Text>
+      <Text textAlign="center" color={useColorModeValue('gray.600', 'gray.300')}>
+        {text}
+      </Text>
+    </VStack>
+  );
+};
 
-export default function Home({ games, categories, featuredGames }: HomeProps) {
-  const [searchTerm, setSearchTerm] = React.useState('');
-  const [selectedCategory, setSelectedCategory] = React.useState('all');
-  const [sortBy, setSortBy] = React.useState('ranking');
+const Home: NextPage = () => {
+  const { isAuthenticated } = useAuth();
+  const bgColor = useColorModeValue('gray.50', 'gray.900');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
 
   return (
-    <MainLayout>
-      <Container maxW="container.xl">
-        {/* Search and Filter Section */}
-        <Box mb={8}>
-          <HStack spacing={4}>
-            <Input
-              placeholder="ابحث عن الألعاب..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <IconButton
-              aria-label="Search"
-              icon={<SearchIcon />}
-              colorScheme="primary"
-            />
-            <Select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              w="200px"
-            >
-              <option value="ranking">الترتيب</option>
-              <option value="price-asc">السعر: من الأقل إلى الأعلى</option>
-              <option value="price-desc">السعر: من الأعلى إلى الأقل</option>
-              <option value="rating">التقييم</option>
-            </Select>
-          </HStack>
-        </Box>
+    <Box>
+      {/* Hero Section */}
+      <Box bg={bgColor} py={20}>
+        <Container maxW="container.xl">
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={10} alignItems="center">
+            <VStack align="flex-start" spacing={6}>
+              <Heading as="h1" size="2xl">
+                متجر الألعاب الرقمية العربي الأول
+              </Heading>
+              <Text fontSize="xl" color={useColorModeValue('gray.600', 'gray.300')}>
+                اكتشف مجموعة واسعة من الألعاب الرقمية بأسعار تنافسية
+              </Text>
+              <HStack spacing={4}>
+                {!isAuthenticated ? (
+                  <>
+                    <NextLink href="/register" passHref legacyBehavior>
+                      <Button as="a" colorScheme="blue" size="lg">
+                        سجل الآن
+                      </Button>
+                    </NextLink>
+                    <NextLink href="/login" passHref legacyBehavior>
+                      <Button as="a" variant="outline" size="lg">
+                        تسجيل الدخول
+                      </Button>
+                    </NextLink>
+                  </>
+                ) : (
+                  <NextLink href="/dashboard" passHref legacyBehavior>
+                    <Button as="a" colorScheme="blue" size="lg">
+                      لوحة التحكم
+                    </Button>
+                  </NextLink>
+                )}
+              </HStack>
+            </VStack>
+            <Flex justify="center">
+              <Image
+                src="/logo.svg"
+                alt="Samma Store Logo"
+                width={400}
+                height={400}
+                objectFit="contain"
+              />
+            </Flex>
+          </SimpleGrid>
+        </Container>
+      </Box>
 
-        {/* Categories Section */}
-        <CategoryTabs
-          categories={categories}
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
-        />
-
-        {/* Featured Games Section */}
-        <Box my={8}>
-          <Heading size="lg" mb={4}>
-            الألعاب المميزة
-          </Heading>
-          <Grid
-            templateColumns={{
-              base: '1fr',
-              md: 'repeat(2, 1fr)',
-              lg: 'repeat(3, 1fr)',
-            }}
-            gap={6}
-          >
-            {featuredGames.map((game) => (
-              <GameCard key={game.id} game={game} />
-            ))}
-          </Grid>
-        </Box>
-
-        {/* All Games Section */}
-        <Box my={8}>
-          <Heading size="lg" mb={4}>
-            جميع الألعاب
-          </Heading>
-          <Grid
-            templateColumns={{
-              base: '1fr',
-              md: 'repeat(2, 1fr)',
-              lg: 'repeat(3, 1fr)',
-            }}
-            gap={6}
-          >
-            {games.map((game) => (
-              <GameCard key={game.id} game={game} />
-            ))}
-          </Grid>
-        </Box>
+      {/* Features Section */}
+      <Container maxW="container.xl" py={20}>
+        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={10}>
+          <Feature
+            icon={FaGamepad}
+            title="مجموعة متنوعة"
+            text="آلاف الألعاب من مختلف الفئات والتصنيفات"
+          />
+          <Feature
+            icon={FaShoppingCart}
+            title="شراء آمن"
+            text="دفع آمن وسريع مع دعم متعدد طرق الدفع"
+          />
+          <Feature
+            icon={FaStar}
+            title="تقييمات موثوقة"
+            text="تقييمات وآراء حقيقية من مجتمع اللاعبين"
+          />
+        </SimpleGrid>
       </Container>
-    </MainLayout>
+
+      {/* Footer */}
+      <Box borderTopWidth={1} borderColor={borderColor} py={8}>
+        <Container maxW="container.xl">
+          <SimpleGrid columns={{ base: 1, md: 4 }} spacing={8}>
+            <VStack align="flex-start">
+              <Heading size="md">عن سماء</Heading>
+              <NextLink href="/about" passHref legacyBehavior>
+                <ChakraLink>من نحن</ChakraLink>
+              </NextLink>
+              <NextLink href="/contact" passHref legacyBehavior>
+                <ChakraLink>اتصل بنا</ChakraLink>
+              </NextLink>
+            </VStack>
+            <VStack align="flex-start">
+              <Heading size="md">المساعدة</Heading>
+              <NextLink href="/faq" passHref legacyBehavior>
+                <ChakraLink>الأسئلة الشائعة</ChakraLink>
+              </NextLink>
+              <NextLink href="/support" passHref legacyBehavior>
+                <ChakraLink>الدعم الفني</ChakraLink>
+              </NextLink>
+            </VStack>
+            <VStack align="flex-start">
+              <Heading size="md">القانونية</Heading>
+              <NextLink href="/terms" passHref legacyBehavior>
+                <ChakraLink>الشروط والأحكام</ChakraLink>
+              </NextLink>
+              <NextLink href="/privacy" passHref legacyBehavior>
+                <ChakraLink>سياسة الخصوصية</ChakraLink>
+              </NextLink>
+            </VStack>
+            <VStack align="flex-start">
+              <Heading size="md">تابعنا</Heading>
+              <HStack spacing={4}>
+                <ChakraLink href="#" isExternal>
+                  <Icon as={FaGamepad} w={6} h={6} />
+                </ChakraLink>
+                <ChakraLink href="#" isExternal>
+                  <Icon as={FaSearch} w={6} h={6} />
+                </ChakraLink>
+              </HStack>
+            </VStack>
+          </SimpleGrid>
+          <Text mt={8} textAlign="center" color={useColorModeValue('gray.600', 'gray.400')}>
+            © {new Date().getFullYear()} سماء. جميع الحقوق محفوظة
+          </Text>
+        </Container>
+      </Box>
+    </Box>
   );
-}
+};
 
-export const getServerSideProps: GetServerSideProps = async () => {
-  // In a real application, fetch this data from your API
-  const games = []; // Fetch games from API
-  const categories = []; // Fetch categories from API
-  const featuredGames = []; // Fetch featured games from API
-
-  return {
-    props: {
-      games,
-      categories,
-      featuredGames,
-    },
-  };
-}; 
+export default Home; 

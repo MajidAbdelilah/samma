@@ -1,23 +1,27 @@
-import React from 'react';
-import { AppProps } from 'next/app';
-import { ChakraProvider } from '@chakra-ui/react';
-import { theme } from '../theme/index';
-import { PayPalScriptProvider } from '@paypal/react-paypal-js';
-import RTLProvider from '../components/RTLProvider';
-import { AuthProvider } from '../hooks/useAuth';
+import type { AppProps } from 'next/app';
+import { ChakraProvider, extendTheme } from '@chakra-ui/react';
+import Head from 'next/head';
+import { AuthProvider } from '../components/Auth/AuthProvider';
+
+// Extend the theme to include custom colors, fonts, etc
+const theme = extendTheme({
+  config: {
+    initialColorMode: 'light',
+    useSystemColorMode: false,
+  },
+  direction: 'rtl', // Enable RTL support
+});
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
     <ChakraProvider theme={theme}>
+      <Head>
+        <title>سماء - متجر الألعاب الرقمية العربي</title>
+        <meta name="description" content="متجر الألعاب الرقمية العربي الأول" />
+        <link rel="icon" href="/logo.svg" type="image/svg+xml" />
+      </Head>
       <AuthProvider>
-        <RTLProvider>
-          <PayPalScriptProvider options={{ 
-            'client-id': process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID!,
-            currency: 'USD'
-          }}>
-            <Component {...pageProps} />
-          </PayPalScriptProvider>
-        </RTLProvider>
+        <Component {...pageProps} />
       </AuthProvider>
     </ChakraProvider>
   );
