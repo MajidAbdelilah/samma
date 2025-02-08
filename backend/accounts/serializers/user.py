@@ -11,8 +11,8 @@ class UserSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'date_joined')
-        read_only_fields = ('id', 'date_joined')
+        fields = ('id', 'username', 'email', 'first_name', 'last_name')
+        read_only_fields = ('id',)
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -25,59 +25,28 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = (
-            'id', 'username', 'email', 'first_name', 'last_name',
-            'profile_picture', 'bio', 'date_of_birth', 'phone_number',
-            'paypal_email', 'total_games', 'total_sales', 'average_rating',
-            'created_at', 'updated_at'
-        )
-        read_only_fields = ('id', 'email', 'created_at', 'updated_at')
-        extra_kwargs = {
-            'date_of_birth': {'required': False},
-            'phone_number': {'required': False},
-            'paypal_email': {'required': False},
-        }
-
-    def validate_paypal_email(self, value):
-        """
-        Validate PayPal email
-        """
-        if value and value == self.instance.email:
-            raise serializers.ValidationError(
-                _("PayPal email must be different from your account email")
-            )
-        return value
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'date_joined')
+        read_only_fields = ('id', 'date_joined')
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for creating new users
     """
-    password = serializers.CharField(write_only=True, min_length=8)
-    confirm_password = serializers.CharField(write_only=True)
-
+    password = serializers.CharField(write_only=True)
+    
     class Meta:
         model = User
-        fields = (
-            'username', 'email', 'password', 'confirm_password',
-            'first_name', 'last_name'
-        )
-
-    def validate(self, data):
-        """
-        Check that the passwords match
-        """
-        if data['password'] != data['confirm_password']:
-            raise serializers.ValidationError(
-                {"confirm_password": _("Passwords do not match")}
-            )
-        return data
+        fields = ('id', 'username', 'email', 'password', 'first_name', 'last_name')
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'email': {'required': True}
+        }
 
     def create(self, validated_data):
         """
         Create and return a new user
         """
-        validated_data.pop('confirm_password')
         user = User.objects.create_user(**validated_data)
         return user
 
@@ -92,17 +61,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = (
-            'username', 'first_name', 'last_name', 'profile_picture',
-            'bio', 'date_of_birth', 'phone_number', 'paypal_email',
-            'current_password', 'new_password', 'confirm_new_password'
-        )
-        extra_kwargs = {
-            'username': {'required': False},
-            'date_of_birth': {'required': False},
-            'phone_number': {'required': False},
-            'paypal_email': {'required': False},
-        }
+        fields = ('first_name', 'last_name', 'email')
 
     def validate(self, data):
         """
@@ -149,29 +108,37 @@ class UserStatisticsSerializer(serializers.ModelSerializer):
     """
     Serializer for user statistics
     """
-    total_games = serializers.IntegerField(read_only=True)
-    total_sales = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
-    average_rating = serializers.DecimalField(max_digits=3, decimal_places=2, read_only=True)
-    total_purchases = serializers.SerializerMethodField()
-    total_spent = serializers.SerializerMethodField()
+    total_games = serializers.IntegerField()
+    total_sales = serializers.DecimalField(max_digits=10, decimal_places=2)
+    average_rating = serializers.DecimalField(max_digits=3, decimal_places=2)
 
     class Meta:
         model = User
-        fields = (
-            'id', 'username', 'total_games', 'total_sales',
-            'average_rating', 'total_purchases', 'total_spent'
-        )
+        fields = ('id', 'username', 'total_games', 'total_sales', 'average_rating')
         read_only_fields = fields
 
-    def get_total_purchases(self, obj):
-        """
-        Get total number of purchases made by the user
-        """
-        return obj.payments_made.filter(status='completed').count()
 
-    def get_total_spent(self, obj):
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    """
+    Serializer for user registration
+    """
+    password = serializers.CharField(write_only=True)
+    
+    class Meta:
+        model = User
+        fields = ('id', 'email', 'username', 'password')
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'email': {'required': True}
+        }
+    
+    def create(self, validated_data):
         """
-        Get total amount spent by the user
+        Create and return a new user
         """
-        return obj.payments_made.filter(status='completed').aggregate(
-            total=models.Sum('amount'))['total'] or 0 
+        user = User.objects.create_user(
+            email=validated_data['email'],
+            username=validated_data['username'],
+            password=validated_data['password']
+        )
+        return user 
