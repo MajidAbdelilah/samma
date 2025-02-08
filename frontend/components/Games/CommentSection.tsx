@@ -1,94 +1,178 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   VStack,
   Box,
   Text,
-  Avatar,
-  HStack,
   Button,
   Textarea,
+  useToast,
+  Avatar,
+  HStack,
   Divider,
+  Spinner,
 } from '@chakra-ui/react';
 import { useAuth } from '../../hooks/useAuth';
 
 interface Comment {
-  id: string;
-  userId: string;
-  userName: string;
-  userAvatar: string;
+  id: number;
+  user: {
+    username: string;
+  };
   content: string;
-  createdAt: string;
+  rating?: number;
+  created_at: string;
 }
 
 interface CommentSectionProps {
-  gameId: string;
+  gameId: number;
 }
 
 const CommentSection: React.FC<CommentSectionProps> = ({ gameId }) => {
-  const { isAuthenticated } = useAuth();
-  const [comments, setComments] = React.useState<Comment[]>([]);
-  const [newComment, setNewComment] = React.useState('');
-  const [isLoading, setIsLoading] = React.useState(false);
-
-  React.useEffect(() => {
-    fetchComments();
-  }, [gameId]);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+  const toast = useToast();
 
   const fetchComments = async () => {
+    setLoading(true);
     try {
-      const response = await fetch(`/api/games/${gameId}/comments`);
-      if (!response.ok) throw new Error('Failed to fetch comments');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/games/comments/?game=${gameId}`, {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to fetch comments');
+      }
+      
       const data = await response.json();
-      setComments(data);
+      setComments(data || []);
     } catch (error) {
       console.error('Error fetching comments:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to load comments',
+        status: 'error',
+        duration: 3000,
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSubmitComment = async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (gameId) {
+      fetchComments();
+    }
+  }, [gameId]);
+
+  const getCsrfToken = async (): Promise<string> => {
+    try {
+      // First, make a GET request to get a new CSRF token
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/core/csrf/`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to get CSRF token');
+      }
+      
+      // Get the CSRF token from the cookie
+      const cookies = document.cookie.split(';');
+      const csrfCookie = cookies.find(cookie => cookie.trim().startsWith('csrftoken='));
+      if (!csrfCookie) {
+        throw new Error('CSRF token not found in cookies');
+      }
+      
+      return decodeURIComponent(csrfCookie.split('=')[1].trim());
+    } catch (error) {
+      console.error('Error getting CSRF token:', error);
+      throw error;
+    }
+  };
+
+  const handleSubmitComment = async () => {
     if (!newComment.trim()) return;
 
+    setSubmitting(true);
     try {
-      setIsLoading(true);
-      const response = await fetch(`/api/games/${gameId}/comments`, {
+      // Get a fresh CSRF token
+      const csrfToken = await getCsrfToken();
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/games/comments/`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
         },
-        body: JSON.stringify({ content: newComment }),
+        body: JSON.stringify({ 
+          content: newComment,
+          game: gameId,
+        }),
       });
 
-      if (!response.ok) throw new Error('Failed to post comment');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to post comment');
+      }
 
-      const comment = await response.json();
-      setComments((prev) => [comment, ...prev]);
+      const data = await response.json();
+      setComments([data, ...comments]);
       setNewComment('');
+      toast({
+        title: 'Success',
+        description: 'Comment posted successfully',
+        status: 'success',
+        duration: 3000,
+      });
     } catch (error) {
       console.error('Error posting comment:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to post comment',
+        status: 'error',
+        duration: 3000,
+      });
     } finally {
-      setIsLoading(false);
+      setSubmitting(false);
     }
   };
 
-  return (
-    <VStack align="stretch" spacing={6}>
-      <Text fontSize="xl" fontWeight="bold">
-        التعليقات
-      </Text>
+  if (loading) {
+    return (
+      <Box textAlign="center" py={8}>
+        <Spinner size="xl" />
+      </Box>
+    );
+  }
 
+  return (
+    <VStack spacing={6} align="stretch">
       {isAuthenticated && (
-        <Box as="form" onSubmit={handleSubmitComment}>
+        <Box>
           <Textarea
-            placeholder="اكتب تعليقك..."
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
+            placeholder="اكتب تعليقك..."
             mb={2}
           />
           <Button
-            type="submit"
-            colorScheme="primary"
-            isLoading={isLoading}
+            colorScheme="blue"
+            onClick={handleSubmitComment}
+            isLoading={submitting}
             isDisabled={!newComment.trim()}
           >
             إرسال التعليق
@@ -96,25 +180,25 @@ const CommentSection: React.FC<CommentSectionProps> = ({ gameId }) => {
         </Box>
       )}
 
-      <VStack align="stretch" spacing={4}>
-        {comments.map((comment) => (
-          <Box key={comment.id} p={4} bg="white" rounded="md" shadow="sm">
-            <HStack spacing={3} mb={2}>
-              <Avatar
-                size="sm"
-                name={comment.userName}
-                src={comment.userAvatar}
-              />
-              <Box>
-                <Text fontWeight="bold">{comment.userName}</Text>
-                <Text fontSize="sm" color="gray.500">
-                  {new Date(comment.createdAt).toLocaleDateString('ar-SA')}
+      <VStack spacing={4} align="stretch">
+        {comments.length > 0 ? (
+          comments.map((comment) => (
+            <Box key={comment.id} p={4} borderWidth={1} borderRadius="md">
+              <HStack spacing={4} mb={2}>
+                <Avatar size="sm" name={comment.user.username} />
+                <Text fontWeight="bold">{comment.user.username}</Text>
+                <Text color="gray.500" fontSize="sm">
+                  {new Date(comment.created_at).toLocaleDateString('ar-SA')}
                 </Text>
-              </Box>
-            </HStack>
-            <Text>{comment.content}</Text>
-          </Box>
-        ))}
+              </HStack>
+              <Text>{comment.content}</Text>
+            </Box>
+          ))
+        ) : (
+          <Text textAlign="center" color="gray.500">
+            لا توجد تعليقات بعد. كن أول من يعلق!
+          </Text>
+        )}
       </VStack>
     </VStack>
   );

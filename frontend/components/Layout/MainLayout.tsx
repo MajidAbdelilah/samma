@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Container } from '@chakra-ui/react';
+import { Box } from '@chakra-ui/react';
 import Navbar from './Navbar';
 import Footer from './Footer';
 
@@ -9,11 +9,11 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   return (
-    <Box minH="100vh" display="flex" flexDirection="column">
+    <Box minH="100vh" bg="gray.50" display="flex" flexDirection="column">
       <Navbar />
-      <Container maxW="container.xl" flex="1" py={8}>
+      <Box as="main" py={4} flex="1">
         {children}
-      </Container>
+      </Box>
       <Footer />
     </Box>
   );

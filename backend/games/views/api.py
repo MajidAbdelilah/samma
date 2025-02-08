@@ -126,9 +126,11 @@ class GameCommentViewSet(viewsets.ModelViewSet):
     queryset = GameComment.objects.all()
     serializer_class = GameCommentSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsCommentOwnerOrReadOnly]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['game']
 
     def get_queryset(self):
-        return GameComment.objects.filter(parent=None)
+        return GameComment.objects.filter(parent=None).order_by('-created_at')
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

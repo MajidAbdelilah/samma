@@ -9,6 +9,7 @@ from core.views.api import (
     SystemHealthCheckAPIView,
     health_check,
     system_info,
+    GetCSRFToken,
 )
 
 app_name = 'core'
@@ -23,4 +24,6 @@ urlpatterns = [
     path('notifications/mark-read/<int:pk>/', MarkNotificationReadAPIView.as_view(), name='mark-notification-read'),
     path('system/health-check/', health_check, name='health-check'),
     path('system/info/', system_info, name='system-info'),
+    path('health/', SystemHealthCheckAPIView.as_view(), name='system-health'),
+    path('csrf/', GetCSRFToken.as_view(), name='csrf-token'),
 ] + router.urls 

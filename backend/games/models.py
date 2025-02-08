@@ -137,17 +137,18 @@ class Game(models.Model):
         if not self.slug:
             self.slug = slugify(self.title)
         
-        # Calculate ad score based on bid, rating, and comments
-        from django.db.models import Count
-        comments_count = self.comments.count()
-        
-        # Ad score formula: (bid_percentage * 10) + (rating) + (log(comments_count + 1) * 2)
-        from math import log
-        self.ad_score = (
-            self.bid_percentage * 10 +  # Bid has the highest weight
-            self.rating +               # Rating directly added
-            (log(comments_count + 1) * 2)  # Logarithmic scale for comments
-        )
+        # Calculate ad score only if the object already exists
+        if self.pk:
+            from django.db.models import Count
+            comments_count = self.comments.count()
+            
+            # Ad score formula: (bid_percentage * 10) + (rating) + (log(comments_count + 1) * 2)
+            from math import log
+            self.ad_score = (
+                self.bid_percentage * 10 +  # Bid has the highest weight
+                self.rating +               # Rating directly added
+                (log(comments_count + 1) * 2)  # Logarithmic scale for comments
+            )
         
         super().save(*args, **kwargs)
 

@@ -13,10 +13,34 @@ import {
   Flex,
   Icon,
   Link as ChakraLink,
+  Card,
+  CardBody,
+  Badge,
+  Skeleton,
 } from '@chakra-ui/react';
 import NextLink from 'next/link';
 import { FaGamepad, FaSearch, FaShoppingCart, FaStar } from 'react-icons/fa';
 import { useAuth } from '../hooks/useAuth';
+import { useEffect, useState } from 'react';
+import MainLayout from '../components/Layout/MainLayout';
+
+interface Game {
+  id: number;
+  title: string;
+  price: number;
+  rating: number;
+  main_image: string;
+  seller: {
+    username: string;
+  };
+}
+
+interface Category {
+  id: number;
+  name: string;
+  description: string;
+  icon: string;
+}
 
 const Feature = ({ icon, title, text }: { icon: any; title: string; text: string }) => {
   return (
@@ -40,13 +64,72 @@ const Feature = ({ icon, title, text }: { icon: any; title: string; text: string
   );
 };
 
+const GameCard: React.FC<{ game: Game }> = ({ game }) => {
+  const rating = typeof game.rating === 'string' ? parseFloat(game.rating) : game.rating;
+  
+  return (
+    <Card>
+      <CardBody>
+        <Image
+          src={game.main_image || '/images/game-placeholder.svg'}
+          alt={game.title}
+          borderRadius="lg"
+          mb={4}
+          height="200px"
+          width="100%"
+          objectFit="cover"
+        />
+        <VStack align="start" spacing={2}>
+          <Heading size="md">{game.title}</Heading>
+          <Text color="gray.500">{game.seller.username}</Text>
+          <HStack justify="space-between" width="100%">
+            <Badge colorScheme="blue">${game.price}</Badge>
+            <HStack>
+              <Icon as={FaStar} color="yellow.400" />
+              <Text>{rating?.toFixed(1) || '0.0'}</Text>
+            </HStack>
+          </HStack>
+        </VStack>
+      </CardBody>
+    </Card>
+  );
+};
+
 const Home: NextPage = () => {
   const { isAuthenticated } = useAuth();
   const bgColor = useColorModeValue('gray.50', 'gray.900');
-  const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const [featuredGames, setFeaturedGames] = useState<Game[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch featured games
+        const gamesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/games/top-games/?metric=rating`, {
+          credentials: 'include',
+        });
+        const gamesData = await gamesResponse.json();
+        setFeaturedGames(gamesData.results || []);
+
+        // Fetch categories
+        const categoriesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/games/categories/`, {
+          credentials: 'include',
+        });
+        const categoriesData = await categoriesResponse.json();
+        setCategories(categoriesData.results || []);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   return (
-    <Box>
+    <MainLayout>
       {/* Hero Section */}
       <Box bg={bgColor} py={20}>
         <Container maxW="container.xl">
@@ -61,23 +144,32 @@ const Home: NextPage = () => {
               <HStack spacing={4}>
                 {!isAuthenticated ? (
                   <>
-                    <NextLink href="/register" passHref legacyBehavior>
-                      <Button as="a" colorScheme="blue" size="lg">
-                        سجل الآن
-                      </Button>
-                    </NextLink>
-                    <NextLink href="/login" passHref legacyBehavior>
-                      <Button as="a" variant="outline" size="lg">
-                        تسجيل الدخول
-                      </Button>
-                    </NextLink>
+                    <Button
+                      as={NextLink}
+                      href="/register"
+                      colorScheme="blue"
+                      size="lg"
+                    >
+                      سجل الآن
+                    </Button>
+                    <Button
+                      as={NextLink}
+                      href="/login"
+                      variant="outline"
+                      size="lg"
+                    >
+                      تسجيل الدخول
+                    </Button>
                   </>
                 ) : (
-                  <NextLink href="/dashboard" passHref legacyBehavior>
-                    <Button as="a" colorScheme="blue" size="lg">
-                      لوحة التحكم
-                    </Button>
-                  </NextLink>
+                  <Button
+                    as={NextLink}
+                    href="/games/discover"
+                    colorScheme="blue"
+                    size="lg"
+                  >
+                    اكتشف الألعاب
+                  </Button>
                 )}
               </HStack>
             </VStack>
@@ -93,6 +185,31 @@ const Home: NextPage = () => {
           </SimpleGrid>
         </Container>
       </Box>
+
+      {/* Featured Games Section */}
+      <Container maxW="container.xl" py={20}>
+        <Heading mb={8}>الألعاب المميزة</Heading>
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={8}>
+          {loading ? (
+            Array(3).fill(0).map((_, i) => (
+              <Skeleton key={i} height="400px" />
+            ))
+          ) : featuredGames.length > 0 ? (
+            featuredGames.map((game) => (
+              <Box 
+                key={game.id} 
+                as="a" 
+                href={`/games/${game.id}`}
+                _hover={{ textDecoration: 'none' }}
+              >
+                <GameCard game={game} />
+              </Box>
+            ))
+          ) : (
+            <Text>لا توجد ألعاب مميزة حالياً</Text>
+          )}
+        </SimpleGrid>
+      </Container>
 
       {/* Features Section */}
       <Container maxW="container.xl" py={20}>
@@ -115,55 +232,46 @@ const Home: NextPage = () => {
         </SimpleGrid>
       </Container>
 
-      {/* Footer */}
-      <Box borderTopWidth={1} borderColor={borderColor} py={8}>
-        <Container maxW="container.xl">
-          <SimpleGrid columns={{ base: 1, md: 4 }} spacing={8}>
-            <VStack align="flex-start">
-              <Heading size="md">عن سماء</Heading>
-              <NextLink href="/about" passHref legacyBehavior>
-                <ChakraLink>من نحن</ChakraLink>
-              </NextLink>
-              <NextLink href="/contact" passHref legacyBehavior>
-                <ChakraLink>اتصل بنا</ChakraLink>
-              </NextLink>
-            </VStack>
-            <VStack align="flex-start">
-              <Heading size="md">المساعدة</Heading>
-              <NextLink href="/faq" passHref legacyBehavior>
-                <ChakraLink>الأسئلة الشائعة</ChakraLink>
-              </NextLink>
-              <NextLink href="/support" passHref legacyBehavior>
-                <ChakraLink>الدعم الفني</ChakraLink>
-              </NextLink>
-            </VStack>
-            <VStack align="flex-start">
-              <Heading size="md">القانونية</Heading>
-              <NextLink href="/terms" passHref legacyBehavior>
-                <ChakraLink>الشروط والأحكام</ChakraLink>
-              </NextLink>
-              <NextLink href="/privacy" passHref legacyBehavior>
-                <ChakraLink>سياسة الخصوصية</ChakraLink>
-              </NextLink>
-            </VStack>
-            <VStack align="flex-start">
-              <Heading size="md">تابعنا</Heading>
-              <HStack spacing={4}>
-                <ChakraLink href="#" isExternal>
-                  <Icon as={FaGamepad} w={6} h={6} />
-                </ChakraLink>
-                <ChakraLink href="#" isExternal>
-                  <Icon as={FaSearch} w={6} h={6} />
-                </ChakraLink>
-              </HStack>
-            </VStack>
-          </SimpleGrid>
-          <Text mt={8} textAlign="center" color={useColorModeValue('gray.600', 'gray.400')}>
-            © {new Date().getFullYear()} سماء. جميع الحقوق محفوظة
-          </Text>
-        </Container>
-      </Box>
-    </Box>
+      {/* Categories Section */}
+      <Container maxW="container.xl" py={20}>
+        <Heading mb={8}>التصنيفات</Heading>
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={8}>
+          {loading ? (
+            Array(4).fill(0).map((_, i) => (
+              <Skeleton key={i} height="200px" />
+            ))
+          ) : categories.length > 0 ? (
+            categories.map((category) => (
+              <Box
+                key={category.id}
+                as="a"
+                href={`/games/category/${category.id}`}
+                _hover={{ transform: 'translateY(-4px)', transition: '0.2s', textDecoration: 'none' }}
+              >
+                <Card>
+                  <CardBody>
+                    <VStack spacing={4}>
+                      <Image
+                        src={category.icon || '/images/category-placeholder.svg'}
+                        alt={category.name}
+                        width={64}
+                        height={64}
+                      />
+                      <Heading size="md">{category.name}</Heading>
+                      <Text noOfLines={2} textAlign="center">
+                        {category.description}
+                      </Text>
+                    </VStack>
+                  </CardBody>
+                </Card>
+              </Box>
+            ))
+          ) : (
+            <Text>لا توجد تصنيفات متاحة حالياً</Text>
+          )}
+        </SimpleGrid>
+      </Container>
+    </MainLayout>
   );
 };
 

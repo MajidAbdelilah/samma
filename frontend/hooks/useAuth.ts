@@ -2,7 +2,7 @@ import { useState, useEffect, createContext, useContext } from 'react';
 
 interface User {
   id: string;
-  name: string;
+  username: string;
   email: string;
 }
 
@@ -27,18 +27,17 @@ export function useAuthState() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Check for stored auth token and validate it
+    // Check if user is authenticated
     checkAuth();
   }, []);
 
   const checkAuth = async () => {
     try {
-      const token = localStorage.getItem('samma_token');
-      if (!token) return;
-
-      const response = await fetch('/api/auth/me', {
+      const response = await fetch('/api/accounts/me/', {
+        credentials: 'include',
         headers: {
-          Authorization: `Bearer ${token}`
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
         }
       });
 
@@ -54,17 +53,20 @@ export function useAuthState() {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/accounts/login/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ email, password })
       });
 
       if (!response.ok) throw new Error('Login failed');
 
-      const { token, user } = await response.json();
-      localStorage.setItem('samma_token', token);
-      setUser(user);
+      const userData = await response.json();
+      setUser(userData);
       setIsAuthenticated(true);
     } catch (error) {
       console.error('Login failed:', error);
@@ -72,25 +74,39 @@ export function useAuthState() {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('samma_token');
+  const logout = async () => {
+    try {
+      await fetch('/api/accounts/logout/', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        }
+      });
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
     setUser(null);
     setIsAuthenticated(false);
   };
 
   const register = async (name: string, email: string, password: string) => {
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch('/api/accounts/register/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password })
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username: name, email, password })
       });
 
       if (!response.ok) throw new Error('Registration failed');
 
-      const { token, user } = await response.json();
-      localStorage.setItem('samma_token', token);
-      setUser(user);
+      const userData = await response.json();
+      setUser(userData);
       setIsAuthenticated(true);
     } catch (error) {
       console.error('Registration failed:', error);
@@ -98,7 +114,13 @@ export function useAuthState() {
     }
   };
 
-  return { isAuthenticated, user, login, logout, register };
+  return {
+    user,
+    isAuthenticated,
+    login,
+    logout,
+    register,
+  };
 }
 
 export const useAuth = () => useContext(AuthContext); 

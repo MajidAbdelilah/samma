@@ -206,48 +206,28 @@ REST_FRAMEWORK = {
 }
 
 # Cookie settings
-SESSION_COOKIE_SECURE = False  # Set to False for development
-CSRF_COOKIE_SECURE = False    # Set to False for development
-SESSION_COOKIE_SAMESITE = 'Lax'  # Changed from 'None' to 'Lax' for better compatibility
-CSRF_COOKIE_SAMESITE = 'Lax'    # Changed from 'None' to 'Lax' for better compatibility
-CSRF_USE_SESSIONS = True       # Changed to True to store CSRF token in session
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SAMESITE = 'None'
+CSRF_USE_SESSIONS = False
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_NAME = 'csrftoken'
 CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
 CSRF_COOKIE_DOMAIN = None
-SESSION_COOKIE_DOMAIN = None
-
-# For development only
-if DEBUG:
-    CORS_ORIGIN_ALLOW_ALL = True
-    CSRF_TRUSTED_ORIGINS = [
-        'http://localhost:3000',
-        'https://localhost:3000',
-        'http://localhost:8443',
-        'https://localhost:8443',
-        'http://127.0.0.1:8443',
-        'https://127.0.0.1:8443',
-    ]
+CSRF_TRUSTED_ORIGINS = [
+    'https://localhost:8443',
+    'https://127.0.0.1:8443',
+]
 
 # CORS settings
+CORS_ORIGIN_ALLOW_ALL = False
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-    'https://localhost:3000',
-    'http://localhost:8443',
     'https://localhost:8443',
-    'http://127.0.0.1:8443',
     'https://127.0.0.1:8443',
 ]
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = True  # For development only
-CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
-]
+CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
@@ -262,8 +242,9 @@ CORS_ALLOW_HEADERS = [
 
 # Add CSRF exempt for development
 CSRF_EXEMPT_URLS = [
-    r'^/api/v1/accounts/register/$',
     r'^/api/v1/accounts/login/$',
+    r'^/api/v1/accounts/register/$',
+    r'^/api/v1/core/csrf/$',
 ]
 
 # Authentication settings
@@ -317,14 +298,30 @@ if not DEBUG:
     STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 # Security settings
-SECURE_SSL_REDIRECT = not DEBUG
+SECURE_SSL_REDIRECT = False  # Changed for development
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_HSTS_SECONDS = 31536000  # 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
+SESSION_COOKIE_DOMAIN = None
 
 # Debug Toolbar settings
 INTERNAL_IPS = [
     '127.0.0.1',
     'localhost',
 ]
+
+# Session settings
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+
+# File Upload Settings
+FILE_UPLOAD_MAX_MEMORY_SIZE = 1073741824  # 1GB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 1073741824  # 1GB
+MAX_UPLOAD_SIZE = 1073741824  # 1GB
+
+# Ensure media and static directories exist
+os.makedirs(os.path.join(BASE_DIR, 'media'), exist_ok=True)
+os.makedirs(os.path.join(BASE_DIR, 'static'), exist_ok=True)

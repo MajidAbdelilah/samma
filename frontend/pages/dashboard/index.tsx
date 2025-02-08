@@ -1,8 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Container,
-  Grid,
   Heading,
   Stat,
   StatLabel,
@@ -22,216 +21,195 @@ import {
   Button,
   HStack,
   useToast,
+  Card,
+  CardBody,
+  SimpleGrid,
+  Text,
+  Spinner,
+  Center,
 } from '@chakra-ui/react';
-import { GetServerSideProps } from 'next';
-import MainLayout from '../../components/Layout/MainLayout';
-import { Game } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useRouter } from 'next/router';
+import MainLayout from '../../components/Layout/MainLayout';
 
-interface SalesData {
-  totalSales: number;
-  monthlyRevenue: number;
-  totalDownloads: number;
+interface UserStats {
+  total_games: number;
+  total_sales: number;
+  average_rating: number;
 }
 
-interface PurchaseHistory {
-  id: string;
-  gameId: string;
-  gameName: string;
-  price: number;
-  purchaseDate: string;
-}
-
-interface DashboardProps {
-  publishedGames: Game[];
-  salesData: SalesData;
-  purchaseHistory: PurchaseHistory[];
-}
-
-const Dashboard: React.FC<DashboardProps> = ({
-  publishedGames,
-  salesData,
-  purchaseHistory,
-}) => {
+const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const router = useRouter();
   const toast = useToast();
+  const [loading, setLoading] = useState(true);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [games, setGames] = useState([]);
 
-  const handleEditGame = (gameId: string) => {
-    router.push(`/games/${gameId}/edit`);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch user statistics
+        const statsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts/statistics/`, {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        if (!statsResponse.ok) {
+          throw new Error('Failed to fetch statistics');
+        }
+        
+        const statsData = await statsResponse.json();
+        setUserStats(statsData);
+
+        // Fetch user's games
+        const gamesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts/my-games/`, {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        if (!gamesResponse.ok) {
+          throw new Error('Failed to fetch games');
+        }
+        
+        const gamesData = await gamesResponse.json();
+        setGames(gamesData);
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch dashboard data',
+          status: 'error',
+          duration: 3000,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [toast]);
+
+  const formatNumber = (value: number | null | undefined, decimals: number = 2): string => {
+    if (typeof value !== 'number') return '0.' + '0'.repeat(decimals);
+    return value.toFixed(decimals);
   };
 
-  const handleDeleteGame = async (gameId: string) => {
-    try {
-      const response = await fetch(`/api/games/${gameId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error('Failed to delete game');
-
-      toast({
-        title: 'تم حذف اللعبة بنجاح',
-        status: 'success',
-        duration: 3000,
-      });
-      
-      router.reload();
-    } catch (error) {
-      toast({
-        title: 'فشل حذف اللعبة',
-        status: 'error',
-        duration: 3000,
-      });
-    }
+  const formatRating = (rating: number | null | undefined): string => {
+    return formatNumber(rating, 1);
   };
+
+  const formatPrice = (price: number | null | undefined): string => {
+    return `$${formatNumber(price, 2)}`;
+  };
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <Center h="100vh">
+          <Spinner size="xl" />
+        </Center>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
       <Container maxW="container.xl" py={8}>
-        <Heading mb={6}>لوحة التحكم</Heading>
+        <Box mb={8}>
+          <Heading mb={6}>لوحة التحكم</Heading>
+          
+          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
+            <Card>
+              <CardBody>
+                <Stat>
+                  <StatLabel>إجمالي المبيعات</StatLabel>
+                  <StatNumber>{formatPrice(userStats?.total_sales)}</StatNumber>
+                </Stat>
+              </CardBody>
+            </Card>
+            
+            <Card>
+              <CardBody>
+                <Stat>
+                  <StatLabel>الألعاب المنشورة</StatLabel>
+                  <StatNumber>{userStats?.total_games || 0}</StatNumber>
+                </Stat>
+              </CardBody>
+            </Card>
+            
+            <Card>
+              <CardBody>
+                <Stat>
+                  <StatLabel>متوسط التقييم</StatLabel>
+                  <StatNumber>{formatRating(userStats?.average_rating)}/5</StatNumber>
+                </Stat>
+              </CardBody>
+            </Card>
+          </SimpleGrid>
+        </Box>
 
-        <StatGroup mb={8}>
-          <Stat>
-            <StatLabel>إجمالي المبيعات</StatLabel>
-            <StatNumber>${salesData.totalSales}</StatNumber>
-          </Stat>
-          <Stat>
-            <StatLabel>الإيرادات الشهرية</StatLabel>
-            <StatNumber>${salesData.monthlyRevenue}</StatNumber>
-          </Stat>
-          <Stat>
-            <StatLabel>إجمالي التحميلات</StatLabel>
-            <StatNumber>{salesData.totalDownloads}</StatNumber>
-          </Stat>
-        </StatGroup>
-
-        <Tabs colorScheme="primary">
-          <TabList>
-            <Tab>الألعاب المنشورة</Tab>
-            <Tab>سجل المشتريات</Tab>
-          </TabList>
-
-          <TabPanels>
-            <TabPanel>
-              <Box overflowX="auto">
-                <Table variant="simple">
-                  <Thead>
-                    <Tr>
-                      <Th>اسم اللعبة</Th>
-                      <Th>السعر</Th>
-                      <Th>التقييم</Th>
-                      <Th>نسبة العمولة</Th>
-                      <Th>التحميلات</Th>
-                      <Th>الإجراءات</Th>
-                    </Tr>
-                  </Thead>
-                  <Tbody>
-                    {publishedGames.map((game) => (
+        <Card>
+          <CardBody>
+            <Heading size="md" mb={4}>سجل المشتريات</Heading>
+            <Box overflowX="auto">
+              <Table variant="simple">
+                <Thead>
+                  <Tr>
+                    <Th>اسم اللعبة</Th>
+                    <Th>السعر</Th>
+                    <Th>التقييم</Th>
+                    <Th>التحميلات</Th>
+                    <Th>الإجراءات</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {games.length > 0 ? (
+                    games.map((game: any) => (
                       <Tr key={game.id}>
                         <Td>{game.title}</Td>
-                        <Td>${game.price}</Td>
-                        <Td>{game.rating}/10</Td>
-                        <Td>{game.bidPercentage}%</Td>
-                        <Td>{game.commentCount}</Td>
+                        <Td>{formatPrice(game.price)}</Td>
+                        <Td>{formatRating(game.rating)}/5</Td>
+                        <Td>{game.downloads || 0}</Td>
                         <Td>
                           <HStack spacing={2}>
                             <Button
                               size="sm"
-                              colorScheme="primary"
-                              onClick={() => handleEditGame(game.id)}
+                              colorScheme="blue"
+                              onClick={() => router.push(`/games/${game.id}/edit`)}
                             >
                               تعديل
                             </Button>
                             <Button
                               size="sm"
                               colorScheme="red"
-                              onClick={() => handleDeleteGame(game.id)}
                             >
                               حذف
                             </Button>
                           </HStack>
                         </Td>
                       </Tr>
-                    ))}
-                  </Tbody>
-                </Table>
-              </Box>
-            </TabPanel>
-
-            <TabPanel>
-              <Box overflowX="auto">
-                <Table variant="simple">
-                  <Thead>
+                    ))
+                  ) : (
                     <Tr>
-                      <Th>اسم اللعبة</Th>
-                      <Th>السعر</Th>
-                      <Th>تاريخ الشراء</Th>
+                      <Td colSpan={5}>
+                        <Text textAlign="center">لا توجد ألعاب منشورة</Text>
+                      </Td>
                     </Tr>
-                  </Thead>
-                  <Tbody>
-                    {purchaseHistory.map((purchase) => (
-                      <Tr key={purchase.id}>
-                        <Td>{purchase.gameName}</Td>
-                        <Td>${purchase.price}</Td>
-                        <Td>
-                          {new Date(purchase.purchaseDate).toLocaleDateString(
-                            'ar-SA'
-                          )}
-                        </Td>
-                      </Tr>
-                    ))}
-                  </Tbody>
-                </Table>
-              </Box>
-            </TabPanel>
-          </TabPanels>
-        </Tabs>
+                  )}
+                </Tbody>
+              </Table>
+            </Box>
+          </CardBody>
+        </Card>
       </Container>
     </MainLayout>
   );
-};
-
-export const getServerSideProps: GetServerSideProps<DashboardProps> = async () => {
-  // Mock data with proper types
-  const mockData: DashboardProps = {
-    publishedGames: [
-      {
-        id: '1',
-        title: 'عنوان اللعبة',
-        description: 'وصف اللعبة',
-        price: 29.99,
-        rating: 8.5,
-        bidPercentage: 15,
-        commentCount: 42,
-        thumbnailUrl: '/game-thumbnail.jpg',
-        categories: ['action'],
-        tags: ['action', 'adventure'],
-        seller: {
-          id: '123',
-          name: 'المطور',
-        },
-      },
-    ],
-    salesData: {
-      totalSales: 1500,
-      monthlyRevenue: 500,
-      totalDownloads: 100,
-    },
-    purchaseHistory: [
-      {
-        id: '1',
-        gameId: '1',
-        gameName: 'اسم اللعبة',
-        price: 29.99,
-        purchaseDate: '2024-01-01',
-      },
-    ],
-  };
-
-  return {
-    props: mockData,
-  };
 };
 
 export default Dashboard; 

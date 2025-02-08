@@ -18,6 +18,10 @@ from core.serializers.core import (
     DashboardStatsSerializer,
     SystemHealthSerializer,
 )
+from django.http import JsonResponse
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.utils.decorators import method_decorator
+from rest_framework.views import APIView
 
 
 @api_view(['GET'])
@@ -292,4 +296,11 @@ class SystemHealthCheckAPIView(generics.RetrieveAPIView):
                 key='last_backup_time'
             ).exists() else None,
             'error_rate': error_rate
-        } 
+        }
+
+@method_decorator(ensure_csrf_cookie, name='dispatch')
+class GetCSRFToken(APIView):
+    permission_classes = [AllowAny]
+    
+    def get(self, request, *args, **kwargs):
+        return JsonResponse({'detail': 'CSRF cookie set'}) 

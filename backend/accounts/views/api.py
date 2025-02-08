@@ -17,6 +17,8 @@ from accounts.serializers.user import (
 from games.serializers.game import GameListSerializer
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 
 User = get_user_model()
 
@@ -87,7 +89,7 @@ class UserGamesAPIView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return self.request.user.games.all().order_by('-created_at')
+        return self.request.user.games.filter(is_approved=True).order_by('-created_at')
 
 
 class UserStatisticsAPIView(generics.RetrieveAPIView):
@@ -141,28 +143,25 @@ class LoginView(APIView):
                 'message': 'Please provide both email and password'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        try:
-            user = User.objects.get(email=email)
-            if user.check_password(password):
-                login(request, user)
-                return Response({
-                    'message': 'Login successful',
-                    'user': UserProfileSerializer(user).data
-                }, status=status.HTTP_200_OK)
-            else:
-                return Response({
-                    'message': 'Invalid credentials'
-                }, status=status.HTTP_401_UNAUTHORIZED)
-        except User.DoesNotExist:
+        user = authenticate(request, username=email, password=password)
+        if user is not None:
+            login(request, user)
+            return Response({
+                'message': 'Login successful',
+                'user': UserProfileSerializer(user).data
+            }, status=status.HTTP_200_OK)
+        else:
             return Response({
                 'message': 'Invalid credentials'
             }, status=status.HTTP_401_UNAUTHORIZED)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class LogoutView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def post(self, request):
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def logout_view(request):
+    try:
+        # Perform logout
         logout(request)
-        return Response({'message': 'Logged out successfully'}, status=status.HTTP_200_OK) 
+        return Response({'detail': 'Successfully logged out'}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST) 
