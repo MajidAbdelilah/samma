@@ -19,7 +19,7 @@ import {
   Icon,
 } from '@chakra-ui/react';
 import { createApi } from '@/utils/api';
-import type { Game, Category } from '@/types';
+import type { Game, Category } from '@/types/game';
 import GameCard from './GameCard';
 import { useAuth } from '@/hooks/useAuth';
 import { FaPlus } from 'react-icons/fa';
@@ -65,14 +65,15 @@ const GameList: React.FC = () => {
   const fetchGames = async () => {
     try {
       setLoading(true);
-      const response = await api.get<{ results: Game[]; next: string | null }>('/games/');
-      if (response.error) {
-        throw new Error(response.error.message);
+      const endpoint = activeTab === 1 ? '/games/my-games/' : '/games/';
+      const { data, error } = await api.get<{ results: Game[]; next: string | null }>(endpoint);
+      
+      if (error) {
+        throw new Error(error.message);
       }
-      if (response.data) {
-        setGames(response.data.results);
-        setNextPage(response.data.next || null);
-      }
+      
+      setGames(data?.results || []);
+      setNextPage(data?.next || null);
     } catch (err) {
       console.error('Error fetching games:', err);
       setError(err instanceof Error ? err.message : 'Failed to load games');

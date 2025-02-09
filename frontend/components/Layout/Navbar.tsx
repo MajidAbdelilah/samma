@@ -70,7 +70,7 @@ const Navbar = () => {
               >
                 نشر لعبة جديدة
               </Button>
-              <Button as={Link} href="/games/discover" variant="ghost">
+              <Button as={Link} href="/games" variant="ghost">
                 اكتشف الألعاب
               </Button>
               <Menu>
@@ -116,4 +116,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar; 
+export default Navbar;

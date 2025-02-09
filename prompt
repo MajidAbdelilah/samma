@@ -1,14 +1,5 @@
 write an excellent AI prompt about an Arabic website called samma(sky) its an Arabic digital games store were people can create accounts and login and sell(games(paypal only)) and buy(games(by using paypal)) and rate(game stars 10 max) and comment(on game pages). every game has a page and in the stores front page there are categories for every game and also tags for every game and the users can market there games via bedding on tags and/or categories and you get ahead of other game ads by giving a higher bedding compared to other bidders. basically players can bid on percentages of there game sale share(5% or more(5% is the minimum for listing the game on the website)). every game on the website is an ad and depending on how much the user decided to share with us(sale percentage) and how much is the rating of the game(how many stars) and how many comments it has the game position on its tags and categories increase or decrease. this prompt i am going to give to an ai coder to generate code. so be technically fucused and accurate, also focuse on features, also focuse on security, also focuse on performance.
 
-
-
-
-
-
-
-
-
-
 Prompt for AI Coder:
 
 Project Title:
@@ -126,4 +117,11 @@ Ensure the UI is fully in Arabic (with proper RTL support).
 Consider future-proofing for additional language support if needed.
 Task Summary:
 Generate a complete, production-ready codebase that implements the above features and requirements for the Samma (Sky) digital games store. The solution must emphasize security, performance, and a clean, maintainable code architecture. Ensure that the bidding system is robust and integrates seamlessly with the overall game listing and ranking logic. Provide detailed inline comments and separate documentation that explains the architecture, API endpoints, and key components.
+
+// The prompt details:
+// - Project Title and Overview: Samma (Sky), an Arabic digital games store with user accounts, game listing pages, and secure PayPal integration.
+// - Core Features: User registration/auth, game listing/management, individual game pages with ratings (10 max stars) and comments, and a bidding system (minimum 5%) to affect ad positioning.
+// - Technical Requirements: Modular design (MVC or similar), choice of robust web framework, clean RESTful/GraphQL API, relational database with caching (Redis), and secure payment integration.
+// - Security & Performance: Emphasizes strong password management, input validation, HTTPS use, optimized database queries, caching, and scalable architecture.
+// - Additional: Documentation, tests, and full Arabic RTL support.
 
