@@ -53,68 +53,56 @@ class Game(models.Model):
     """
     Model for game listings
     """
-    # Basic information
+    # Basic Information
     title = models.CharField(_('title'), max_length=200)
-    slug = models.SlugField(_('slug'), unique=True)
+    slug = models.SlugField(_('slug'), unique=True, blank=True)
     description = models.TextField(_('description'))
+    price = models.DecimalField(
+        _('price'), 
+        max_digits=10, 
+        decimal_places=2,
+        validators=[MinValueValidator(0)]
+    )
+    
+    # Relations
     seller = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='games',
         verbose_name=_('seller')
     )
-    price = models.DecimalField(_('price'), max_digits=10, decimal_places=2)
-    
-    # Categories and tags
     category = models.ForeignKey(
         Category,
         on_delete=models.PROTECT,
         related_name='games',
         verbose_name=_('category')
     )
-    tags = models.ManyToManyField(
-        Tag,
-        related_name='games',
-        verbose_name=_('tags')
+    
+    # Files
+    thumbnail = models.ImageField(
+        _('thumbnail'), 
+        upload_to='game_thumbnails/',
+        help_text=_('Main image for the game')
+    )
+    game_file = models.FileField(
+        _('game file'), 
+        upload_to='game_files/',
+        help_text=_('Zip file containing the game')
     )
     
-    # Game files and media
-    main_image = models.ImageField(_('main image'), upload_to='game_images/')
-    additional_images = models.JSONField(_('additional images'), default=list, blank=True)
-    game_file = models.FileField(_('game file'), upload_to='game_files/')
-    
-    # Game details
-    version = models.CharField(_('version'), max_length=50)
-    release_date = models.DateField(_('release date'))
-    system_requirements = models.JSONField(_('system requirements'))
-    
-    # Statistics and metrics
-    rating = models.DecimalField(
-        _('rating'),
-        max_digits=3,
-        decimal_places=2,
-        default=0,
-        validators=[MinValueValidator(0), MaxValueValidator(10)]
+    # Game Details
+    version = models.CharField(
+        _('version'), 
+        max_length=50, 
+        default='1.0.0'
     )
-    total_ratings = models.PositiveIntegerField(_('total ratings'), default=0)
-    total_sales = models.PositiveIntegerField(_('total sales'), default=0)
-    
-    # Ad placement
-    bid_percentage = models.DecimalField(
-        _('bid percentage'),
-        max_digits=5,
-        decimal_places=2,
-        default=5.00,
-        validators=[MinValueValidator(5.00)]  # Minimum 5% bid
-    )
-    ad_score = models.DecimalField(
-        _('ad score'),
-        max_digits=10,
-        decimal_places=2,
-        default=0
+    system_requirements = models.JSONField(
+        _('system requirements'),
+        default=dict,
+        help_text=_('Minimum and recommended system requirements')
     )
     
-    # Status and timestamps
+    # Status
     is_active = models.BooleanField(_('is active'), default=True)
     is_approved = models.BooleanField(_('is approved'), default=False)
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
@@ -123,9 +111,9 @@ class Game(models.Model):
     class Meta:
         verbose_name = _('game')
         verbose_name_plural = _('games')
-        ordering = ['-ad_score', '-created_at']
+        ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['-ad_score', '-created_at']),
+            models.Index(fields=['-created_at']),
             models.Index(fields=['slug']),
             models.Index(fields=['seller']),
         ]
@@ -136,20 +124,6 @@ class Game(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.title)
-        
-        # Calculate ad score only if the object already exists
-        if self.pk:
-            from django.db.models import Count
-            comments_count = self.comments.count()
-            
-            # Ad score formula: (bid_percentage * 10) + (rating) + (log(comments_count + 1) * 2)
-            from math import log
-            self.ad_score = (
-                self.bid_percentage * 10 +  # Bid has the highest weight
-                self.rating +               # Rating directly added
-                (log(comments_count + 1) * 2)  # Logarithmic scale for comments
-            )
-        
         super().save(*args, **kwargs)
 
 
