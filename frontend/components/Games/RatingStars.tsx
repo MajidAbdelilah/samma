@@ -1,104 +1,71 @@
-import React, { useState } from 'react';
-import {
-  HStack,
-  IconButton,
-  Text,
-  useToast,
-  ToastStatus,
-} from '@chakra-ui/react';
-import { StarIcon } from '@chakra-ui/icons';
-import { useAuth } from '../../hooks/useAuth';
-import { RatingStarsProps } from './types';
+import { HStack, Icon, Text } from '@chakra-ui/react';
+import { FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
 
-interface ToastMessage {
-  title: string;
-  status: ToastStatus;
-  duration: number;
+interface RatingStarsProps {
+  rating: number;
+  totalRatings: number;
+  size?: number;
+  showCount?: boolean;
 }
 
 const RatingStars: React.FC<RatingStarsProps> = ({
-  gameId,
-  currentRating,
-  onRatingChange,
-  isInteractive = true,
+  rating,
+  totalRatings,
+  size = 16,
+  showCount = true,
 }) => {
-  const { isAuthenticated } = useAuth();
-  const toast = useToast();
-  const [hoveredRating, setHoveredRating] = useState<number | null>(null);
+  const stars = [];
+  const fullStars = Math.floor(rating);
+  const hasHalfStar = rating % 1 >= 0.5;
+  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
 
-  const showToast = ({ title, status, duration }: ToastMessage) => {
-    toast({
-      title,
-      status,
-      duration,
-      isClosable: true,
-    });
-  };
+  // Add full stars
+  for (let i = 0; i < fullStars; i++) {
+    stars.push(
+      <Icon
+        key={`full-${i}`}
+        as={FaStar}
+        color="yellow.400"
+        w={`${size}px`}
+        h={`${size}px`}
+      />
+    );
+  }
 
-  const handleRating = async (rating: number): Promise<void> => {
-    if (!isAuthenticated) {
-      showToast({
-        title: 'يجب تسجيل الدخول للتقييم',
-        status: 'warning',
-        duration: 3000,
-      });
-      return;
-    }
+  // Add half star if needed
+  if (hasHalfStar) {
+    stars.push(
+      <Icon
+        key="half"
+        as={FaStarHalfAlt}
+        color="yellow.400"
+        w={`${size}px`}
+        h={`${size}px`}
+      />
+    );
+  }
 
-    try {
-      const response = await fetch(`/api/games/${gameId}/rate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ rating }),
-      });
-
-      if (!response.ok) throw new Error('Failed to submit rating');
-
-      onRatingChange?.(rating);
-      showToast({
-        title: 'تم حفظ التقييم بنجاح',
-        status: 'success',
-        duration: 3000,
-      });
-    } catch (error) {
-      showToast({
-        title: 'فشل حفظ التقييم',
-        status: 'error',
-        duration: 3000,
-      });
-    }
-  };
+  // Add empty stars
+  for (let i = 0; i < emptyStars; i++) {
+    stars.push(
+      <Icon
+        key={`empty-${i}`}
+        as={FaRegStar}
+        color="yellow.400"
+        w={`${size}px`}
+        h={`${size}px`}
+      />
+    );
+  }
 
   return (
-    <HStack spacing={1}>
-      {[...Array(10)].map((_, index) => {
-        const rating = index + 1;
-        const isFilled = (hoveredRating || currentRating) >= rating;
-
-        return (
-          <IconButton
-            key={index}
-            size="sm"
-            variant="ghost"
-            icon={
-              <StarIcon
-                color={isFilled ? 'yellow.400' : 'gray.300'}
-                boxSize={5}
-              />
-            }
-            aria-label={`Rate ${rating}`}
-            onClick={() => isInteractive && handleRating(rating)}
-            onMouseEnter={() => isInteractive && setHoveredRating(rating)}
-            onMouseLeave={() => isInteractive && setHoveredRating(null)}
-            isDisabled={!isInteractive}
-          />
-        );
-      })}
-      <Text fontSize="lg" fontWeight="bold" ml={2}>
-        {currentRating.toFixed(1)}/10
-      </Text>
+    <HStack spacing={1} align="center">
+      {stars}
+      {showCount && (
+        <Text fontSize="sm" color="gray.600" ml={2}>
+          ({totalRatings} {totalRatings === 1 ? 'rating' : 'ratings'})
+        </Text>
+      )}
     </HStack>
   );
 };

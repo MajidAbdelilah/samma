@@ -63,6 +63,31 @@ class Game(models.Model):
         decimal_places=2,
         validators=[MinValueValidator(0)]
     )
+    bid_percentage = models.DecimalField(
+        _('commission rate'),
+        max_digits=5,
+        decimal_places=2,
+        default=5.00,
+        validators=[MinValueValidator(5), MaxValueValidator(100)],
+        help_text=_('Commission rate percentage (minimum 5%)')
+    )
+    
+    # Ratings and Stats
+    rating = models.DecimalField(
+        _('rating'),
+        max_digits=3,
+        decimal_places=1,
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(10)]
+    )
+    total_ratings = models.PositiveIntegerField(
+        _('total ratings'),
+        default=0
+    )
+    total_sales = models.PositiveIntegerField(
+        _('total sales'),
+        default=0
+    )
     
     # Relations
     seller = models.ForeignKey(
@@ -82,12 +107,16 @@ class Game(models.Model):
     thumbnail = models.ImageField(
         _('thumbnail'), 
         upload_to='game_thumbnails/',
-        help_text=_('Main image for the game')
+        help_text=_('Main image for the game'),
+        null=True,
+        blank=True
     )
     game_file = models.FileField(
         _('game file'), 
         upload_to='game_files/',
-        help_text=_('Zip file containing the game')
+        help_text=_('Zip file containing the game'),
+        null=True,
+        blank=True
     )
     
     # Game Details
@@ -99,12 +128,14 @@ class Game(models.Model):
     system_requirements = models.JSONField(
         _('system requirements'),
         default=dict,
-        help_text=_('Minimum and recommended system requirements')
+        help_text=_('Minimum and recommended system requirements'),
+        null=True,
+        blank=True
     )
     
     # Status
     is_active = models.BooleanField(_('is active'), default=True)
-    is_approved = models.BooleanField(_('is approved'), default=False)
+    is_approved = models.BooleanField(_('is approved'), default=True)
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
     updated_at = models.DateTimeField(_('updated at'), auto_now=True)
 

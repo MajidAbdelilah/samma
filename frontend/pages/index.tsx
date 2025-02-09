@@ -65,7 +65,7 @@ const Feature = ({ icon, title, text }: { icon: any; title: string; text: string
 };
 
 const GameCard: React.FC<{ game: Game }> = ({ game }) => {
-  const rating = typeof game.rating === 'string' ? parseFloat(game.rating) : game.rating;
+  const rating = typeof game.rating === 'number' ? game.rating : 0;
   
   return (
     <Card>
@@ -83,10 +83,10 @@ const GameCard: React.FC<{ game: Game }> = ({ game }) => {
           <Heading size="md">{game.title}</Heading>
           <Text color="gray.500">{game.seller.username}</Text>
           <HStack justify="space-between" width="100%">
-            <Badge colorScheme="blue">${game.price}</Badge>
+            <Badge colorScheme="blue">${game.price.toFixed(2)}</Badge>
             <HStack>
               <Icon as={FaStar} color="yellow.400" />
-              <Text>{rating?.toFixed(1) || '0.0'}</Text>
+              <Text>{rating.toFixed(1)}</Text>
             </HStack>
           </HStack>
         </VStack>
@@ -110,7 +110,7 @@ const Home: NextPage = () => {
           credentials: 'include',
         });
         const gamesData = await gamesResponse.json();
-        setFeaturedGames(gamesData.results || []);
+        setFeaturedGames(Array.isArray(gamesData) ? gamesData : gamesData.results || []);
 
         // Fetch categories
         const categoriesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/games/categories/`, {
@@ -164,7 +164,7 @@ const Home: NextPage = () => {
                 ) : (
                   <Button
                     as={NextLink}
-                    href="/games/discover"
+                    href="/games"
                     colorScheme="blue"
                     size="lg"
                   >

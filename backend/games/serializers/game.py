@@ -71,13 +71,13 @@ class GameListSerializer(serializers.ModelSerializer):
         model = Game
         fields = (
             'id', 'title', 'slug', 'seller', 'price',
-            'category', 'tags', 'main_image', 'rating',
-            'total_ratings', 'total_sales', 'bid_percentage',
-            'ad_score', 'is_active', 'is_approved', 'created_at'
+            'category', 'tags', 'thumbnail', 'rating',
+            'total_ratings', 'total_sales', 'is_active',
+            'is_approved', 'created_at', 'bid_percentage'
         )
         read_only_fields = (
             'id', 'slug', 'rating', 'total_ratings',
-            'total_sales', 'ad_score', 'created_at'
+            'total_sales', 'created_at'
         )
 
 
@@ -94,17 +94,15 @@ class GameDetailSerializer(serializers.ModelSerializer):
         model = Game
         fields = (
             'id', 'title', 'slug', 'description', 'seller',
-            'price', 'category', 'tags', 'main_image',
-            'additional_images', 'version', 'release_date',
-            'system_requirements', 'rating', 'total_ratings',
-            'total_sales', 'bid_percentage', 'ad_score',
+            'price', 'category', 'tags', 'thumbnail',
+            'game_file', 'version', 'system_requirements',
+            'rating', 'total_ratings', 'total_sales',
             'is_active', 'is_approved', 'created_at',
             'updated_at', 'comments'
         )
         read_only_fields = (
             'id', 'slug', 'rating', 'total_ratings',
-            'total_sales', 'ad_score', 'created_at',
-            'updated_at'
+            'total_sales', 'created_at', 'updated_at'
         )
 
 
@@ -123,9 +121,11 @@ class GameCreateSerializer(serializers.ModelSerializer):
             'title',
             'description',
             'price',
+            'bid_percentage',
             'category_id',
             'thumbnail',
             'game_file',
+            'version',
             'system_requirements',
         ]
 
@@ -133,6 +133,9 @@ class GameCreateSerializer(serializers.ModelSerializer):
         """
         Validate system requirements format
         """
+        if value is None:
+            return {}
+        
         if not isinstance(value, dict):
             raise serializers.ValidationError(_("System requirements must be an object"))
 
@@ -165,20 +168,21 @@ class GameCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(_("Price must be greater than 0"))
         return value
 
+    def validate_bid_percentage(self, value):
+        """
+        Validate bid percentage is within allowed range
+        """
+        if value < 5:
+            raise serializers.ValidationError(_("Commission rate must be at least 5%"))
+        if value > 100:
+            raise serializers.ValidationError(_("Commission rate cannot exceed 100%"))
+        return value
+
     def validate(self, data):
         """
         Additional validation
         """
-        if not data.get('thumbnail'):
-            raise serializers.ValidationError({
-                'thumbnail': _("Thumbnail image is required")
-            })
-        
-        if not data.get('game_file'):
-            raise serializers.ValidationError({
-                'game_file': _("Game file is required")
-            })
-
+        # Make thumbnail and game_file optional for now
         return data
 
 
@@ -202,9 +206,8 @@ class GameUpdateSerializer(serializers.ModelSerializer):
         model = Game
         fields = (
             'title', 'description', 'price', 'category_id',
-            'tag_ids', 'main_image', 'additional_images',
-            'game_file', 'version', 'system_requirements',
-            'bid_percentage', 'is_active'
+            'tag_ids', 'thumbnail', 'game_file', 'version',
+            'system_requirements', 'is_active'
         )
         read_only_fields = ('slug',)
 

@@ -1,4 +1,5 @@
 from rest_framework import viewsets, generics, permissions, filters, status
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.db.models import Q, Count, Avg, Sum
@@ -71,84 +72,52 @@ class TagViewSet(viewsets.ModelViewSet):
 
 class GameViewSet(viewsets.ModelViewSet):
     queryset = Game.objects.all()
-    serializer_class = GameCreateSerializer
-    parser_classes = [MultiPartParser, FormParser, JSONParser]
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+    lookup_field = 'slug'
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return GameCreateSerializer
+        elif self.action in ['update', 'partial_update']:
+            return GameUpdateSerializer
+        elif self.action == 'list':
+            return GameListSerializer
+        return GameDetailSerializer
 
     def get_queryset(self):
         """
-        Users can only see their own games unless staff
+        Return games based on user and action:
+        - For list/retrieve: Return approved games + user's own games if authenticated
+        - For update/delete: Only allow owner's games
+        - For other actions: Only show user's games
         """
-        if self.request.user.is_staff:
-            return Game.objects.all()
-        return Game.objects.filter(seller=self.request.user)
-
-    def create(self, request, *args, **kwargs):
-        """
-        Create a new game
-        """
-        print("\n=== Game Creation Debug Info ===")
-        print(f"User: {request.user}")
-        print(f"Content Type: {request.content_type}")
+        base_queryset = Game.objects.filter(is_active=True)
         
-        # Log request data
-        print("\nRequest Data:")
-        for key, value in request.data.items():
-            if key in ['thumbnail', 'game_file']:
-                print(f"{key}: <File: {value.name if hasattr(value, 'name') else 'None'}>")
-            else:
-                print(f"{key}: {value}")
-
-        try:
-            # Validate files
-            if 'thumbnail' not in request.FILES:
-                return Response(
-                    {"detail": "Thumbnail image is required"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+        if self.action in ['list', 'retrieve']:
+            if self.request.user.is_authenticated:
+                # Show approved games + user's own games
+                return base_queryset.filter(
+                    Q(is_approved=True) | Q(seller=self.request.user)
+                ).distinct()
+            # Show only approved games to anonymous users
+            return base_queryset.filter(is_approved=True)
             
-            if 'game_file' not in request.FILES:
-                return Response(
-                    {"detail": "Game file is required"},
-                    status=status.HTTP_400_BAD_REQUEST
+        elif self.action in ['update', 'partial_update', 'destroy']:
+            game_slug = self.kwargs.get('slug')
+            game = Game.objects.filter(slug=game_slug).first()
+            if game and game.seller != self.request.user:
+                self.permission_denied(
+                    self.request,
+                    message="You do not have permission to modify this game."
                 )
-
-            # Check thumbnail is an image
-            thumbnail = request.FILES['thumbnail']
-            if not thumbnail.content_type.startswith('image/'):
-                return Response(
-                    {"detail": "Invalid thumbnail file type. Please upload an image."},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # Create serializer
-            serializer = self.get_serializer(data=request.data)
+            return Game.objects.filter(slug=game_slug)
             
-            if not serializer.is_valid():
-                print("Validation errors:", serializer.errors)
-                return Response(
-                    serializer.errors,
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+        # For other actions, show only user's games
+        return base_queryset.filter(seller=self.request.user)
 
-            # Save the game
-            serializer.save(seller=request.user)
-            print("Game created successfully")
-
-            return Response(
-                serializer.data,
-                status=status.HTTP_201_CREATED
-            )
-
-        except Exception as e:
-            print(f"Error creating game: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            
-            return Response(
-                {"detail": str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+    def perform_create(self, serializer):
+        serializer.save(seller=self.request.user)
 
     @action(detail=True, methods=['post'])
     def approve(self, request, slug=None):
@@ -176,12 +145,25 @@ class GameCommentViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsCommentOwnerOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['game']
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+    parser_classes = [JSONParser, FormParser, MultiPartParser]
 
     def get_queryset(self):
-        return GameComment.objects.filter(parent=None).order_by('-created_at')
+        if self.action == 'list':
+            return GameComment.objects.filter(parent=None).order_by('-created_at')
+        return GameComment.objects.all()
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        """
+        Create a new comment
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class GameSearchAPIView(generics.ListAPIView):

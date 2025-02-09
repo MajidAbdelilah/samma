@@ -53,7 +53,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ gameId }) => {
 
     console.log('Fetching comments for game:', gameId);
     try {
-      const { data, error } = await api.get<Comment[]>(`/games/comments/?game=${gameId}`);
+      const { data, error } = await api.get<{ results: Comment[] }>(`/games/comments/?game=${gameId}`);
       
       if (error) {
         console.error('Error response from comments API:', error);
@@ -61,11 +61,18 @@ const CommentSection: React.FC<CommentSectionProps> = ({ gameId }) => {
       }
 
       console.log('Comments data received:', data);
-      if (data) {
-        setComments(data);
+      if (data?.results) {
+        setComments(data.results);
       }
     } catch (error) {
       console.error('Error fetching comments:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to fetch comments',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     } finally {
       setLoading(false);
     }
@@ -93,7 +100,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ gameId }) => {
       }
 
       if (data) {
-        setComments([data, ...comments]);
+        setComments(prevComments => [data, ...(prevComments || [])]);
         setNewComment('');
         toast({
           title: 'Success',

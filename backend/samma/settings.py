@@ -181,7 +181,8 @@ STATICFILES_DIRS = [
 ]
 
 # Media files
-MEDIA_URL = '/media/'
+MEDIA_DOMAIN = 'https://127.0.0.1:8443'
+MEDIA_URL = f'{MEDIA_DOMAIN}/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
@@ -213,8 +214,8 @@ REST_FRAMEWORK = {
 # Cookie settings
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SAMESITE = 'None'
-CSRF_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_USE_SESSIONS = False
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_NAME = 'csrftoken'
@@ -229,7 +230,7 @@ CSRF_TRUSTED_ORIGINS = [
 CSRF_EXEMPT_URLS = [
     r'^/api/v1/accounts/login/$',
     r'^/api/v1/accounts/register/$',
-    r'^/api/v1/games/?$',  # Only exempt the games list/create endpoint
+    r'^/api/v1/games/$',  # Only exempt the games list/create endpoint
 ]
 
 # CORS settings

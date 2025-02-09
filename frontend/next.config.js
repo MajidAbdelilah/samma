@@ -33,11 +33,6 @@ const nextConfig = {
       },
     ];
   },
-  // Server configuration
-  server: {
-    https: true,
-    port: 3000,
-  },
   // Environment variables
   env: {
     NEXT_PUBLIC_API_URL: 'https://127.0.0.1:8443',

@@ -3,110 +3,69 @@ import {
   Box,
   Container,
   Heading,
-  Stat,
-  StatLabel,
-  StatNumber,
-  StatGroup,
   Tab,
   TabList,
   TabPanel,
   TabPanels,
   Tabs,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  Button,
-  HStack,
   useToast,
-  Card,
-  CardBody,
-  SimpleGrid,
-  Text,
   Spinner,
   Center,
 } from '@chakra-ui/react';
 import { useAuth } from '../../hooks/useAuth';
 import { useRouter } from 'next/router';
 import MainLayout from '../../components/Layout/MainLayout';
-
-interface UserStats {
-  total_games: number;
-  total_sales: number;
-  average_rating: number;
-}
+import AnalyticsDashboard from '@/components/Analytics/AnalyticsDashboard';
+import GameList from '@/components/Games/GameList';
+import { createApi } from '@/utils/api';
+import type { Game } from '@/types';
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
   const toast = useToast();
   const [loading, setLoading] = useState(true);
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
-  const [games, setGames] = useState([]);
+  const [games, setGames] = useState<Game[]>([]);
+
+  const api = createApi((message) => {
+    toast({
+      title: 'Error',
+      description: message,
+      status: 'error',
+      duration: 5000,
+      isClosable: true,
+    });
+  });
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch user statistics
-        const statsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/accounts/statistics/`, {
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          }
-        });
-        
-        if (!statsResponse.ok) {
-          throw new Error('Failed to fetch statistics');
-        }
-        
-        const statsData = await statsResponse.json();
-        setUserStats(statsData);
+    const init = async () => {
+      if (!isAuthenticated) {
+        router.replace('/login');
+        return;
+      }
 
-        // Fetch user's games
-        const gamesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/accounts/my-games/`, {
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          }
-        });
-        
-        if (!gamesResponse.ok) {
-          throw new Error('Failed to fetch games');
+      try {
+        const { data, error } = await api.get<{ results: Game[] }>('/games/my-games/');
+        if (error) throw new Error(error.message);
+        if (data?.results) {
+          setGames(data.results);
         }
-        
-        const gamesData = await gamesResponse.json();
-        setGames(gamesData);
-      } catch (error) {
+      } catch (err) {
+        console.error('Error fetching games:', err);
         toast({
           title: 'Error',
-          description: 'Failed to fetch dashboard data',
+          description: err instanceof Error ? err.message : 'Failed to load games',
           status: 'error',
-          duration: 3000,
+          duration: 5000,
+          isClosable: true,
         });
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [toast]);
-
-  const formatNumber = (value: number | null | undefined, decimals: number = 2): string => {
-    if (typeof value !== 'number') return '0.' + '0'.repeat(decimals);
-    return value.toFixed(decimals);
-  };
-
-  const formatRating = (rating: number | null | undefined): string => {
-    return formatNumber(rating, 1);
-  };
-
-  const formatPrice = (price: number | null | undefined): string => {
-    return `$${formatNumber(price, 2)}`;
-  };
+    init();
+  }, [isAuthenticated, router, api, toast]);
 
   if (loading) {
     return (
@@ -123,90 +82,23 @@ const Dashboard: React.FC = () => {
       <Container maxW="container.xl" py={8}>
         <Box mb={8}>
           <Heading mb={6}>لوحة التحكم</Heading>
-          
-          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
-            <Card>
-              <CardBody>
-                <Stat>
-                  <StatLabel>إجمالي المبيعات</StatLabel>
-                  <StatNumber>{formatPrice(userStats?.total_sales)}</StatNumber>
-                </Stat>
-              </CardBody>
-            </Card>
-            
-            <Card>
-              <CardBody>
-                <Stat>
-                  <StatLabel>الألعاب المنشورة</StatLabel>
-                  <StatNumber>{userStats?.total_games || 0}</StatNumber>
-                </Stat>
-              </CardBody>
-            </Card>
-            
-            <Card>
-              <CardBody>
-                <Stat>
-                  <StatLabel>متوسط التقييم</StatLabel>
-                  <StatNumber>{formatRating(userStats?.average_rating)}/5</StatNumber>
-                </Stat>
-              </CardBody>
-            </Card>
-          </SimpleGrid>
         </Box>
 
-        <Card>
-          <CardBody>
-            <Heading size="md" mb={4}>سجل المشتريات</Heading>
-            <Box overflowX="auto">
-              <Table variant="simple">
-                <Thead>
-                  <Tr>
-                    <Th>اسم اللعبة</Th>
-                    <Th>السعر</Th>
-                    <Th>التقييم</Th>
-                    <Th>التحميلات</Th>
-                    <Th>الإجراءات</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {games.length > 0 ? (
-                    games.map((game: any) => (
-                      <Tr key={game.id}>
-                        <Td>{game.title}</Td>
-                        <Td>{formatPrice(game.price)}</Td>
-                        <Td>{formatRating(game.rating)}/5</Td>
-                        <Td>{game.downloads || 0}</Td>
-                        <Td>
-                          <HStack spacing={2}>
-                            <Button
-                              size="sm"
-                              colorScheme="blue"
-                              onClick={() => router.push(`/games/${game.id}/edit`)}
-                            >
-                              تعديل
-                            </Button>
-                            <Button
-                              size="sm"
-                              colorScheme="red"
-                            >
-                              حذف
-                            </Button>
-                          </HStack>
-                        </Td>
-                      </Tr>
-                    ))
-                  ) : (
-                    <Tr>
-                      <Td colSpan={5}>
-                        <Text textAlign="center">لا توجد ألعاب منشورة</Text>
-                      </Td>
-                    </Tr>
-                  )}
-                </Tbody>
-              </Table>
-            </Box>
-          </CardBody>
-        </Card>
+        <Tabs colorScheme="blue">
+          <TabList>
+            <Tab>نظرة عامة</Tab>
+            <Tab>الألعاب</Tab>
+          </TabList>
+
+          <TabPanels>
+            <TabPanel px={0}>
+              <AnalyticsDashboard games={games.map(game => ({ id: game.id.toString(), title: game.title }))} />
+            </TabPanel>
+            <TabPanel px={0}>
+              <GameList />
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
       </Container>
     </MainLayout>
   );

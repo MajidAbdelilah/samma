@@ -2,95 +2,127 @@ import React from 'react';
 import {
   Box,
   Image,
-  Heading,
   Text,
-  Stack,
   Badge,
+  Stack,
+  Heading,
+  useColorModeValue,
+  LinkBox,
+  LinkOverlay,
   HStack,
-  Progress,
+  Icon
 } from '@chakra-ui/react';
-import { StarIcon, ChatIcon } from '@chakra-ui/icons';
-import Link from 'next/link';
-import ImageNext from 'next/image';
+import { FaStar, FaShoppingCart } from 'react-icons/fa';
+import NextLink from 'next/link';
+import type { Game } from '@/types/game';
 
 interface GameCardProps {
-  game: {
-    id: string;
-    title: string;
-    price: number;
-    rating: number;
-    commentCount: number;
-    bidPercentage: number;
-    thumbnailUrl: string;
-    categories: string[];
-  };
+  game: Game;
 }
 
 const GameCard: React.FC<GameCardProps> = ({ game }) => {
+  const {
+    title,
+    slug,
+    price,
+    rating,
+    total_ratings,
+    category,
+    thumbnail,
+    seller
+  } = game;
+
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const textColor = useColorModeValue('gray.600', 'gray.300');
+
+  // Handle rating display
+  const displayRating = typeof rating === 'number' ? rating.toFixed(1) : 'N/A';
+  const displayTotalRatings = total_ratings || 0;
+
   return (
-    <Link href={`/games/${game.id}`}>
-      <Box
-        bg="white"
-        rounded="lg"
-        shadow="md"
-        overflow="hidden"
-        transition="transform 0.2s"
-        _hover={{ transform: 'translateY(-4px)' }}
-      >
-        <ImageNext
-          src={game.thumbnailUrl || '/images/default-game-thumbnail.svg'}
-          alt={game.title}
-          width={300}
-          height={200}
-          style={{ objectFit: 'cover' }}
-          onError={(e) => {
-            const img = e.target as HTMLImageElement;
-            img.src = '/images/default-game-thumbnail.svg';
-          }}
-        />
-        
-        <Stack p={4} spacing={2}>
-          <Heading size="md" noOfLines={1}>
-            {game.title}
-          </Heading>
-          
-          <HStack spacing={4}>
-            <HStack>
-              <StarIcon color="yellow.400" />
-              <Text>{game.rating.toFixed(1)}/10</Text>
-            </HStack>
-            <HStack>
-              <ChatIcon />
-              <Text>{game.commentCount}</Text>
-            </HStack>
-          </HStack>
+    <LinkBox
+      as="article"
+      data-testid="game-card"
+      maxW="sm"
+      borderWidth="1px"
+      borderRadius="lg"
+      overflow="hidden"
+      bg={cardBg}
+      transition="transform 0.2s"
+      _hover={{ transform: 'translateY(-4px)' }}
+    >
+      <Image
+        src={thumbnail || '/images/default-game-thumbnail.svg'}
+        alt={title}
+        height="200px"
+        width="100%"
+        objectFit="cover"
+      />
 
-          <Text fontWeight="bold" color="primary.500">
-            ${game.price}
-          </Text>
-
-          <HStack wrap="wrap" spacing={2}>
-            {game.categories.map((category) => (
-              <Badge key={category} colorScheme="primary">
-                {category}
-              </Badge>
-            ))}
-          </HStack>
-
-          <Box>
-            <Text fontSize="sm" mb={1}>نسبة العمولة: {game.bidPercentage}%</Text>
-            <Progress
-              value={game.bidPercentage}
-              min={5}
-              max={100}
-              colorScheme="primary"
-              size="sm"
-              rounded="full"
-            />
+      <Box p="6">
+        <Box display="flex" alignItems="baseline">
+          <Badge borderRadius="full" px="2" colorScheme="teal">
+            {category.name}
+          </Badge>
+          <Box
+            color={textColor}
+            fontWeight="semibold"
+            letterSpacing="wide"
+            fontSize="xs"
+            textTransform="uppercase"
+            ml="2"
+          >
+            By {seller.username}
           </Box>
+        </Box>
+
+        <Box mt="2">
+          <LinkOverlay as={NextLink} href={`/games/${slug}`}>
+            <Heading size="md" my="2">
+              {title}
+            </Heading>
+          </LinkOverlay>
+        </Box>
+
+        <Stack direction="row" mt="2" alignItems="center" justify="space-between">
+          <HStack spacing={1}>
+            <Icon as={FaStar} color="yellow.400" />
+            <Text fontWeight="bold">
+              {displayRating}
+            </Text>
+            <Text color={textColor} fontSize="sm">
+              ({displayTotalRatings})
+            </Text>
+          </HStack>
+
+          <Text
+            color="green.600"
+            fontSize="xl"
+            fontWeight="bold"
+          >
+            ${typeof price === 'number' ? price.toFixed(2) : '0.00'}
+          </Text>
         </Stack>
+
+        <Box
+          mt="4"
+          as="button"
+          w="full"
+          py="2"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          gap="2"
+          bg="blue.500"
+          color="white"
+          borderRadius="md"
+          _hover={{ bg: 'blue.600' }}
+        >
+          <Icon as={FaShoppingCart} />
+          <Text>Add to Cart</Text>
+        </Box>
       </Box>
-    </Link>
+    </LinkBox>
   );
 };
 
