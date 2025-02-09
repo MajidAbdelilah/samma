@@ -46,7 +46,9 @@ const Login: NextPage = () => {
         isClosable: true,
       });
 
-      router.push('/dashboard');
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 100);
     } catch (error) {
       toast({
         title: 'Error',

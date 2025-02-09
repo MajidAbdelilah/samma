@@ -1,4 +1,5 @@
 import { useState, useEffect, createContext, useContext } from 'react';
+import { AuthContextType } from '@/types';
 
 interface User {
   id: string;
@@ -6,20 +7,14 @@ interface User {
   email: string;
 }
 
-export interface AuthContextType {
-  isAuthenticated: boolean;
-  user: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  register: (name: string, email: string, password: string) => Promise<void>;
-}
-
 export const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
+  isLoading: true,
   user: null,
   login: async () => {},
-  logout: () => {},
+  logout: async () => {},
   register: async () => {},
+  checkAuthStatus: async () => {},
 });
 
 export function useAuthState() {
@@ -123,4 +118,10 @@ export function useAuthState() {
   };
 }
 
-export const useAuth = () => useContext(AuthContext); 
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}; 

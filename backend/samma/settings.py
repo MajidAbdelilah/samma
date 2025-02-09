@@ -198,6 +198,11 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_PARSER_CLASSES': (
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+    ),
     'DEFAULT_FILTER_BACKENDS': (
         'django_filters.rest_framework.DjangoFilterBackend',
     ),
@@ -224,6 +229,7 @@ CSRF_TRUSTED_ORIGINS = [
 CSRF_EXEMPT_URLS = [
     r'^/api/v1/accounts/login/$',
     r'^/api/v1/accounts/register/$',
+    r'^/api/v1/games/?$',  # Only exempt the games list/create endpoint
 ]
 
 # CORS settings
@@ -233,17 +239,31 @@ CORS_ALLOWED_ORIGINS = [
     'https://127.0.0.1:8443',
 ]
 CORS_ALLOW_CREDENTIALS = True
-CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
+CORS_EXPOSE_HEADERS = [
+    'Content-Type',
+    'X-CSRFToken',
+    'Set-Cookie',
+    'Content-Disposition',
+]
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
     'authorization',
     'content-type',
+    'content-disposition',
     'dnt',
     'origin',
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+]
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
 ]
 
 # Authentication settings
@@ -311,10 +331,12 @@ INTERNAL_IPS = [
 ]
 
 # Session settings
-SESSION_COOKIE_SAMESITE = 'Lax'
-CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_HTTPONLY = True
-CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 # File Upload Settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1073741824  # 1GB

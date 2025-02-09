@@ -8,10 +8,10 @@ import {
   useToast,
   Avatar,
   HStack,
-  Divider,
   Spinner,
 } from '@chakra-ui/react';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
+import { createApi } from '@/utils/api';
 
 interface Comment {
   id: number;
@@ -34,110 +34,75 @@ const CommentSection: React.FC<CommentSectionProps> = ({ gameId }) => {
   const [submitting, setSubmitting] = useState(false);
   const { user, isAuthenticated } = useAuth();
   const toast = useToast();
+  
+  const api = createApi((message) => {
+    toast({
+      title: 'Error',
+      description: message,
+      status: 'error',
+      duration: 3000,
+      isClosable: true,
+    });
+  });
 
   const fetchComments = async () => {
-    setLoading(true);
+    if (!gameId) {
+      console.error('No game ID provided');
+      return;
+    }
+
+    console.log('Fetching comments for game:', gameId);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/games/comments/?game=${gameId}`, {
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        }
-      });
+      const { data, error } = await api.get<Comment[]>(`/games/comments/?game=${gameId}`);
       
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to fetch comments');
+      if (error) {
+        console.error('Error response from comments API:', error);
+        throw new Error(error.message);
       }
-      
-      const data = await response.json();
-      setComments(data || []);
+
+      console.log('Comments data received:', data);
+      if (data) {
+        setComments(data);
+      }
     } catch (error) {
       console.error('Error fetching comments:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to load comments',
-        status: 'error',
-        duration: 3000,
-      });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (gameId) {
-      fetchComments();
-    }
+    fetchComments();
   }, [gameId]);
-
-  const getCsrfToken = async (): Promise<string> => {
-    try {
-      // First, make a GET request to get a new CSRF token
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/core/csrf/`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to get CSRF token');
-      }
-      
-      // Get the CSRF token from the cookie
-      const cookies = document.cookie.split(';');
-      const csrfCookie = cookies.find(cookie => cookie.trim().startsWith('csrftoken='));
-      if (!csrfCookie) {
-        throw new Error('CSRF token not found in cookies');
-      }
-      
-      return decodeURIComponent(csrfCookie.split('=')[1].trim());
-    } catch (error) {
-      console.error('Error getting CSRF token:', error);
-      throw error;
-    }
-  };
 
   const handleSubmitComment = async () => {
     if (!newComment.trim()) return;
 
     setSubmitting(true);
+    console.log('Submitting comment for game:', gameId);
     try {
-      // Get a fresh CSRF token
-      const csrfToken = await getCsrfToken();
-      
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/games/comments/`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken,
-        },
-        body: JSON.stringify({ 
-          content: newComment,
-          game: gameId,
-        }),
+      const { data, error } = await api.post<Comment>('/games/comments/', {
+        content: newComment,
+        game: gameId,
+        rating: null
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to post comment');
+      console.log('Comment submission response:', { data, error });
+      if (error) {
+        throw new Error(error.message);
       }
 
-      const data = await response.json();
-      setComments([data, ...comments]);
-      setNewComment('');
-      toast({
-        title: 'Success',
-        description: 'Comment posted successfully',
-        status: 'success',
-        duration: 3000,
-      });
+      if (data) {
+        setComments([data, ...comments]);
+        setNewComment('');
+        toast({
+          title: 'Success',
+          description: 'Comment posted successfully',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      }
     } catch (error) {
       console.error('Error posting comment:', error);
       toast({
@@ -145,6 +110,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ gameId }) => {
         description: error instanceof Error ? error.message : 'Failed to post comment',
         status: 'error',
         duration: 3000,
+        isClosable: true,
       });
     } finally {
       setSubmitting(false);

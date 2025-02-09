@@ -11,6 +11,7 @@ import {
 } from '@chakra-ui/react';
 import { StarIcon, ChatIcon } from '@chakra-ui/icons';
 import Link from 'next/link';
+import ImageNext from 'next/image';
 
 interface GameCardProps {
   game: {
@@ -25,7 +26,7 @@ interface GameCardProps {
   };
 }
 
-const GameCard = ({ game }: GameCardProps) => {
+const GameCard: React.FC<GameCardProps> = ({ game }) => {
   return (
     <Link href={`/games/${game.id}`}>
       <Box
@@ -36,12 +37,16 @@ const GameCard = ({ game }: GameCardProps) => {
         transition="transform 0.2s"
         _hover={{ transform: 'translateY(-4px)' }}
       >
-        <Image
-          src={game.thumbnailUrl}
+        <ImageNext
+          src={game.thumbnailUrl || '/images/default-game-thumbnail.svg'}
           alt={game.title}
-          w="full"
-          h="48"
-          objectFit="cover"
+          width={300}
+          height={200}
+          style={{ objectFit: 'cover' }}
+          onError={(e) => {
+            const img = e.target as HTMLImageElement;
+            img.src = '/images/default-game-thumbnail.svg';
+          }}
         />
         
         <Stack p={4} spacing={2}>

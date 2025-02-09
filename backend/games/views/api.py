@@ -16,6 +16,7 @@ from games.serializers.game import (
     TagSerializer,
     GameCommentSerializer,
 )
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
@@ -69,38 +70,85 @@ class TagViewSet(viewsets.ModelViewSet):
 
 
 class GameViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for viewing and editing game instances.
-    """
     queryset = Game.objects.all()
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
-    lookup_field = 'slug'
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['category', 'tags', 'is_active', 'is_approved']
-    search_fields = ['title', 'description']
-    ordering_fields = ['created_at', 'price', 'rating', 'total_sales', 'ad_score']
-    ordering = ['-ad_score', '-created_at']
-
-    def get_serializer_class(self):
-        if self.action == 'list':
-            return GameListSerializer
-        elif self.action == 'create':
-            return GameCreateSerializer
-        elif self.action in ['update', 'partial_update']:
-            return GameUpdateSerializer
-        return GameDetailSerializer
+    serializer_class = GameCreateSerializer
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        if not self.request.user.is_staff:
-            queryset = queryset.filter(
-                Q(is_active=True, is_approved=True) |
-                Q(seller=self.request.user)
-            )
-        return queryset
+        """
+        Users can only see their own games unless staff
+        """
+        if self.request.user.is_staff:
+            return Game.objects.all()
+        return Game.objects.filter(seller=self.request.user)
 
-    def perform_create(self, serializer):
-        serializer.save(seller=self.request.user)
+    def create(self, request, *args, **kwargs):
+        """
+        Create a new game
+        """
+        print("\n=== Game Creation Debug Info ===")
+        print(f"User: {request.user}")
+        print(f"Content Type: {request.content_type}")
+        
+        # Log request data
+        print("\nRequest Data:")
+        for key, value in request.data.items():
+            if key in ['thumbnail', 'game_file']:
+                print(f"{key}: <File: {value.name if hasattr(value, 'name') else 'None'}>")
+            else:
+                print(f"{key}: {value}")
+
+        try:
+            # Validate files
+            if 'thumbnail' not in request.FILES:
+                return Response(
+                    {"detail": "Thumbnail image is required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            if 'game_file' not in request.FILES:
+                return Response(
+                    {"detail": "Game file is required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Check thumbnail is an image
+            thumbnail = request.FILES['thumbnail']
+            if not thumbnail.content_type.startswith('image/'):
+                return Response(
+                    {"detail": "Invalid thumbnail file type. Please upload an image."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Create serializer
+            serializer = self.get_serializer(data=request.data)
+            
+            if not serializer.is_valid():
+                print("Validation errors:", serializer.errors)
+                return Response(
+                    serializer.errors,
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Save the game
+            serializer.save(seller=request.user)
+            print("Game created successfully")
+
+            return Response(
+                serializer.data,
+                status=status.HTTP_201_CREATED
+            )
+
+        except Exception as e:
+            print(f"Error creating game: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     @action(detail=True, methods=['post'])
     def approve(self, request, slug=None):

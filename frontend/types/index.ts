@@ -72,4 +72,26 @@ export const SORT_OPTIONS: SortOption[] = [
   { value: 'rating', label: 'التقييم' },
   { value: 'newest', label: 'الأحدث' },
   { value: 'downloads', label: 'الأكثر تحميلاً' },
-]; 
+];
+
+export interface User {
+  id: number;
+  email: string;
+  username: string;
+  first_name?: string;
+  last_name?: string;
+  date_joined?: string;
+  total_games?: number;
+  total_sales?: number;
+  average_rating?: number;
+}
+
+export interface AuthContextType {
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  user: User | null;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  register: (username: string, email: string, password: string) => Promise<void>;
+  checkAuthStatus: () => Promise<void>;
+} 

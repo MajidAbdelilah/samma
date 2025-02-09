@@ -114,44 +114,72 @@ class GameCreateSerializer(serializers.ModelSerializer):
     """
     category_id = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(),
-        source='category',
-        write_only=True
-    )
-    tag_ids = serializers.PrimaryKeyRelatedField(
-        queryset=Tag.objects.all(),
-        source='tags',
-        write_only=True,
-        many=True
+        source='category'
     )
 
     class Meta:
         model = Game
-        fields = (
-            'title', 'description', 'price', 'category_id',
-            'tag_ids', 'main_image', 'additional_images',
-            'game_file', 'version', 'release_date',
-            'system_requirements', 'bid_percentage'
-        )
+        fields = [
+            'title',
+            'description',
+            'price',
+            'category_id',
+            'thumbnail',
+            'game_file',
+            'system_requirements',
+        ]
 
-    def validate_bid_percentage(self, value):
+    def validate_system_requirements(self, value):
         """
-        Validate bid percentage
+        Validate system requirements format
         """
-        if value < 5.0:
+        if not isinstance(value, dict):
+            raise serializers.ValidationError(_("System requirements must be an object"))
+
+        required_sections = {'minimum', 'recommended'}
+        if not all(section in value for section in required_sections):
             raise serializers.ValidationError(
-                _("Bid percentage must be at least 5%")
+                _("Both 'minimum' and 'recommended' sections are required")
             )
+
+        required_fields = {'os', 'processor', 'memory', 'graphics', 'storage'}
+        for section in required_sections:
+            if not isinstance(value[section], dict):
+                raise serializers.ValidationError(
+                    _(f"'{section}' must be an object")
+                )
+            
+            missing_fields = required_fields - set(value[section].keys())
+            if missing_fields:
+                raise serializers.ValidationError(
+                    _(f"Missing required fields in {section}: {', '.join(missing_fields)}")
+                )
+
         return value
 
     def validate_price(self, value):
         """
-        Validate price
+        Validate price is positive
         """
         if value <= 0:
-            raise serializers.ValidationError(
-                _("Price must be greater than 0")
-            )
+            raise serializers.ValidationError(_("Price must be greater than 0"))
         return value
+
+    def validate(self, data):
+        """
+        Additional validation
+        """
+        if not data.get('thumbnail'):
+            raise serializers.ValidationError({
+                'thumbnail': _("Thumbnail image is required")
+            })
+        
+        if not data.get('game_file'):
+            raise serializers.ValidationError({
+                'game_file': _("Game file is required")
+            })
+
+        return data
 
 
 class GameUpdateSerializer(serializers.ModelSerializer):

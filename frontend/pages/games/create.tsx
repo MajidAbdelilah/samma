@@ -21,8 +21,9 @@ import {
   Spinner,
 } from '@chakra-ui/react';
 import { useRouter } from 'next/router';
-import MainLayout from '../../components/Layout/MainLayout';
-import { useAuth } from '../../hooks/useAuth';
+import MainLayout from '@/components/Layout/MainLayout';
+import { useAuth } from '@/hooks/useAuth';
+import { createApi } from '@/utils/api';
 
 interface GameFormData {
   title: string;
@@ -32,6 +33,8 @@ interface GameFormData {
   mainImage: File | null;
   gameFile: File | null;
   version: string;
+  bid_percentage: string;
+  release_date: string;
   systemRequirements: {
     minimum: {
       os: string;
@@ -56,8 +59,15 @@ interface Category {
   slug: string;
 }
 
+interface GameResponse {
+  id: string;
+  title: string;
+  description: string;
+  // Add other fields as needed
+}
+
 const CreateGame = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
   const toast = useToast();
   const [loading, setLoading] = useState(false);
@@ -65,6 +75,16 @@ const CreateGame = () => {
   const [mainImagePreview, setMainImagePreview] = useState<string>('');
   const [categories, setCategories] = useState<Category[]>([]);
   
+  const api = createApi((message) => {
+    toast({
+      title: 'Error',
+      description: message,
+      status: 'error',
+      duration: 3000,
+      isClosable: true,
+    });
+  });
+
   const [formData, setFormData] = useState<GameFormData>({
     title: '',
     description: '',
@@ -73,6 +93,8 @@ const CreateGame = () => {
     mainImage: null,
     gameFile: null,
     version: '1.0.0',
+    bid_percentage: '5.00',
+    release_date: new Date().toISOString().split('T')[0],
     systemRequirements: {
       minimum: {
         os: '',
@@ -92,106 +114,82 @@ const CreateGame = () => {
   });
 
   useEffect(() => {
-    // Check authentication status and fetch categories
     const init = async () => {
-      if (typeof window !== 'undefined') {
-        if (!isAuthenticated) {
-          toast({
-            title: 'خطأ',
-            description: 'يجب تسجيل الدخول أولاً',
-            status: 'error',
-            duration: 3000,
-          });
-          router.replace('/login');
-          return;
+      if (!isAuthenticated) {
+        toast({
+          title: 'خطأ',
+          description: 'يجب تسجيل الدخول أولاً',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+        router.replace('/login');
+        return;
+      }
+
+      console.log('Fetching categories...');
+      try {
+        const { data, error } = await api.get<{ results: Category[] }>('/games/categories/');
+        
+        console.log('Categories response:', { data, error });
+        if (error) {
+          console.error('Categories fetch error:', error);
+          throw new Error(error.message || 'Failed to fetch categories');
         }
 
-        try {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/games/categories/`, {
-            method: 'GET',
-            credentials: 'include',
-            headers: {
-              'Accept': 'application/json',
-            }
-          });
-          
-          if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Categories fetch error:', errorData);
-            throw new Error(errorData.detail || 'Failed to fetch categories');
-          }
-          
-          const data = await response.json();
-          if (data.results) {
-            setCategories(data.results);
-          } else {
-            setCategories([]);
-          }
-        } catch (error) {
-          console.error('Failed to fetch categories:', error);
+        if (data?.results) {
+          console.log('Setting categories:', data.results);
+          setCategories(data.results);
+        } else {
+          console.warn('No categories found. Please make sure categories exist in the database.');
           toast({
-            title: 'خطأ',
-            description: error instanceof Error ? error.message : 'فشل في تحميل التصنيفات',
-            status: 'error',
-            duration: 3000,
+            title: 'تنبيه',
+            description: 'لا توجد تصنيفات متاحة. يرجى التأكد من وجود تصنيفات في قاعدة البيانات.',
+            status: 'warning',
+            duration: 5000,
+            isClosable: true,
           });
-          if (error instanceof Error && error.message.includes('Unauthorized')) {
-            router.replace('/login');
-          }
         }
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+        toast({
+          title: 'خطأ',
+          description: error instanceof Error ? error.message : 'فشل في تحميل التصنيفات',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+      } finally {
         setIsPageLoading(false);
       }
     };
+
     init();
   }, [isAuthenticated, router, toast]);
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
-    // Handle nested object paths (e.g., systemRequirements.minimum.os)
-    if (name.includes('.')) {
-      const parts = name.split('.');
-      setFormData((prev) => {
-        const newData = { ...prev };
-        let current: any = newData;
-        for (let i = 0; i < parts.length - 1; i++) {
-          current = current[parts[i]];
-        }
-        current[parts[parts.length - 1]] = value;
-        return newData;
-      });
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'mainImage' | 'gameFile') => {
     const file = e.target.files?.[0];
     if (file) {
-      setFormData((prev) => ({
+      setFormData(prev => ({
         ...prev,
-        mainImage: file,
+        [field]: file
       }));
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setMainImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
-  const handleGameFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFormData((prev) => ({
-        ...prev,
-        gameFile: file,
-      }));
+      if (field === 'mainImage') {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setMainImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -199,45 +197,35 @@ const CreateGame = () => {
     e.preventDefault();
     setLoading(true);
 
-    if (!isAuthenticated) {
-      toast({
-        title: 'خطأ',
-        description: 'يجب تسجيل الدخول أولاً',
-        status: 'error',
-        duration: 3000,
-      });
-      router.push('/login');
-      return;
-    }
-
     try {
-      // Get CSRF token first
-      const csrfResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/core/csrf/`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
-
-      if (!csrfResponse.ok) {
-        const csrfError = await csrfResponse.json();
-        throw new Error(csrfError.detail || 'Failed to get CSRF token');
-      }
-
-      const { csrfToken } = await csrfResponse.json();
+      // Get a fresh CSRF token before submitting
+      await api.get('/core/csrf/');
       
       const formDataToSend = new FormData();
       
-      // Handle basic fields
+      // Log the form data being sent
+      console.log('Form data values:', {
+        title: formData.title,
+        description: formData.description,
+        price: formData.price,
+        category_id: formData.category,
+        version: formData.version,
+        release_date: formData.release_date,
+        bid_percentage: formData.bid_percentage,
+        has_main_image: !!formData.mainImage,
+        has_game_file: !!formData.gameFile,
+        system_requirements: formData.systemRequirements,
+      });
+      
       formDataToSend.append('title', formData.title);
       formDataToSend.append('description', formData.description);
-      formDataToSend.append('price', formData.price);
+      formDataToSend.append('price', formData.price.toString());
       formDataToSend.append('category_id', formData.category);
       formDataToSend.append('version', formData.version);
-      formDataToSend.append('tag_ids', JSON.stringify([])); // Empty array for now
+      formDataToSend.append('tag_ids', JSON.stringify([]));
+      formDataToSend.append('release_date', formData.release_date);
+      formDataToSend.append('bid_percentage', formData.bid_percentage);
       
-      // Handle files
       if (formData.mainImage) {
         formDataToSend.append('main_image', formData.mainImage);
       }
@@ -245,49 +233,49 @@ const CreateGame = () => {
         formDataToSend.append('game_file', formData.gameFile);
       }
       
-      // Handle system requirements as a stringified JSON
-      formDataToSend.append('system_requirements', JSON.stringify({
+      const systemRequirements = {
         minimum: formData.systemRequirements.minimum,
         recommended: formData.systemRequirements.recommended
-      }));
+      };
+      formDataToSend.append('system_requirements', JSON.stringify(systemRequirements));
 
-      // Add default bid percentage
-      formDataToSend.append('bid_percentage', '5.0');
-
-      // Add release date (current date)
-      formDataToSend.append('release_date', new Date().toISOString().split('T')[0]);
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/games`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'X-CSRFToken': csrfToken,
-          'Accept': 'application/json',
-        },
-        body: formDataToSend,
+      // Log the FormData entries
+      console.log('FormData entries:');
+      Array.from(formDataToSend.keys()).forEach(key => {
+        console.log(`${key}:`, formDataToSend.get(key));
       });
+      
+      const { data, error } = await api.post<GameResponse>(
+        '/games/',
+        formDataToSend
+      );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Error creating game:', errorData);
-        throw new Error(errorData.detail || JSON.stringify(errorData));
+      if (error) {
+        console.error('Game creation error:', error);
+        throw new Error(error.message || 'Failed to create game');
       }
 
-      const data = await response.json();
+      if (!data) {
+        throw new Error('No data received from server');
+      }
+
       toast({
         title: 'نجاح',
         description: 'تم إنشاء اللعبة بنجاح',
         status: 'success',
         duration: 3000,
+        isClosable: true,
       });
 
-      router.push(`/games/${data.slug}`);
+      router.push(`/games/${data.id}`);
     } catch (error) {
+      console.error('Error creating game:', error);
       toast({
         title: 'خطأ',
         description: error instanceof Error ? error.message : 'فشل في إنشاء اللعبة',
         status: 'error',
         duration: 3000,
+        isClosable: true,
       });
     } finally {
       setLoading(false);
@@ -304,19 +292,14 @@ const CreateGame = () => {
     );
   }
 
-  if (!isAuthenticated) {
-    return null;
-  }
-
   return (
     <MainLayout>
       <Container maxW="container.xl" py={8}>
-        <VStack spacing={8} align="stretch">
-          <Heading>نشر لعبة جديدة</Heading>
-
+        <Box bg="white" p={6} rounded="lg" shadow="md">
+          <Heading mb={6}>نشر لعبة جديدة</Heading>
+          
           <Box as="form" onSubmit={handleSubmit}>
-            <VStack spacing={6} align="stretch">
-              {/* Basic Information */}
+            <VStack spacing={6}>
               <FormControl isRequired>
                 <FormLabel>عنوان اللعبة</FormLabel>
                 <Input
@@ -328,25 +311,25 @@ const CreateGame = () => {
               </FormControl>
 
               <FormControl isRequired>
-                <FormLabel>الوصف</FormLabel>
+                <FormLabel>وصف اللعبة</FormLabel>
                 <Textarea
                   name="description"
                   value={formData.description}
                   onChange={handleInputChange}
-                  placeholder="اكتب وصفاً للعبة"
+                  placeholder="أدخل وصف اللعبة"
                   minH="200px"
                 />
               </FormControl>
 
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} w="full">
                 <FormControl isRequired>
                   <FormLabel>السعر (USD)</FormLabel>
-                  <NumberInput min={0}>
+                  <NumberInput min={0} precision={2}>
                     <NumberInputField
                       name="price"
                       value={formData.price}
-                      onChange={(value) => handleInputChange({
-                        target: { name: 'price', value }
+                      onChange={(e) => handleInputChange({
+                        target: { name: 'price', value: e.target.value }
                       } as any)}
                       placeholder="0.00"
                     />
@@ -370,25 +353,22 @@ const CreateGame = () => {
                 </FormControl>
               </SimpleGrid>
 
-              {/* File Uploads */}
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} w="full">
                 <FormControl isRequired>
-                  <FormLabel>الصورة الرئيسية</FormLabel>
+                  <FormLabel>صورة اللعبة الرئيسية</FormLabel>
                   <Input
                     type="file"
                     accept="image/*"
-                    onChange={handleImageChange}
+                    onChange={(e) => handleFileChange(e as any, 'mainImage')}
                   />
                   {mainImagePreview && (
-                    <Box mt={2}>
-                      <Image
-                        src={mainImagePreview}
-                        alt="Game preview"
-                        maxH="200px"
-                        objectFit="cover"
-                        borderRadius="md"
-                      />
-                    </Box>
+                    <Image
+                      src={mainImagePreview}
+                      alt="Game preview"
+                      mt={2}
+                      maxH="200px"
+                      objectFit="cover"
+                    />
                   )}
                 </FormControl>
 
@@ -397,150 +377,268 @@ const CreateGame = () => {
                   <Input
                     type="file"
                     accept=".zip,.rar,.7z"
-                    onChange={handleGameFileChange}
+                    onChange={(e) => handleFileChange(e as any, 'gameFile')}
                   />
-                  {formData.gameFile && (
-                    <Text mt={2} fontSize="sm" color="gray.600">
-                      تم اختيار: {formData.gameFile.name}
-                    </Text>
-                  )}
                 </FormControl>
               </SimpleGrid>
 
-              {/* Version */}
-              <FormControl>
-                <FormLabel>الإصدار</FormLabel>
-                <Input
-                  name="version"
-                  value={formData.version}
-                  onChange={handleInputChange}
-                  placeholder="1.0.0"
-                />
-              </FormControl>
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} w="full">
+                <FormControl isRequired>
+                  <FormLabel>نسبة العمولة (%)</FormLabel>
+                  <NumberInput min={5} max={100} precision={2} defaultValue={5}>
+                    <NumberInputField
+                      name="bid_percentage"
+                      value={formData.bid_percentage}
+                      onChange={(e) => handleInputChange({
+                        target: { name: 'bid_percentage', value: e.target.value }
+                      } as any)}
+                      placeholder="5.00"
+                    />
+                  </NumberInput>
+                </FormControl>
 
-              {/* System Requirements */}
-              <Box>
+                <FormControl isRequired>
+                  <FormLabel>تاريخ الإصدار</FormLabel>
+                  <Input
+                    type="date"
+                    name="release_date"
+                    value={formData.release_date}
+                    onChange={handleInputChange}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                </FormControl>
+              </SimpleGrid>
+
+              <Box w="full">
                 <Heading size="md" mb={4}>متطلبات النظام</Heading>
                 
-                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-                  {/* Minimum Requirements */}
+                <VStack spacing={4} align="stretch">
                   <Box>
-                    <Heading size="sm" mb={2}>الحد الأدنى</Heading>
-                    <VStack spacing={4}>
-                      <FormControl>
+                    <Text fontWeight="bold" mb={2}>الحد الأدنى</Text>
+                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                      <FormControl isRequired>
                         <FormLabel>نظام التشغيل</FormLabel>
                         <Input
-                          name="systemRequirements.minimum.os"
+                          name="minimum.os"
                           value={formData.systemRequirements.minimum.os}
-                          onChange={handleInputChange}
+                          onChange={(e) => handleInputChange({
+                            target: {
+                              name: 'systemRequirements',
+                              value: {
+                                ...formData.systemRequirements,
+                                minimum: {
+                                  ...formData.systemRequirements.minimum,
+                                  os: e.target.value
+                                }
+                              }
+                            }
+                          } as any)}
                           placeholder="مثال: Windows 10 64-bit"
                         />
                       </FormControl>
-                      <FormControl>
+                      <FormControl isRequired>
                         <FormLabel>المعالج</FormLabel>
                         <Input
-                          name="systemRequirements.minimum.processor"
+                          name="minimum.processor"
                           value={formData.systemRequirements.minimum.processor}
-                          onChange={handleInputChange}
-                          placeholder="مثال: Intel Core i5-4460 / AMD FX-6300"
+                          onChange={(e) => handleInputChange({
+                            target: {
+                              name: 'systemRequirements',
+                              value: {
+                                ...formData.systemRequirements,
+                                minimum: {
+                                  ...formData.systemRequirements.minimum,
+                                  processor: e.target.value
+                                }
+                              }
+                            }
+                          } as any)}
+                          placeholder="مثال: Intel Core i5"
                         />
                       </FormControl>
-                      <FormControl>
+                      <FormControl isRequired>
                         <FormLabel>الذاكرة</FormLabel>
                         <Input
-                          name="systemRequirements.minimum.memory"
+                          name="minimum.memory"
                           value={formData.systemRequirements.minimum.memory}
-                          onChange={handleInputChange}
+                          onChange={(e) => handleInputChange({
+                            target: {
+                              name: 'systemRequirements',
+                              value: {
+                                ...formData.systemRequirements,
+                                minimum: {
+                                  ...formData.systemRequirements.minimum,
+                                  memory: e.target.value
+                                }
+                              }
+                            }
+                          } as any)}
                           placeholder="مثال: 8 GB RAM"
                         />
                       </FormControl>
-                      <FormControl>
+                      <FormControl isRequired>
                         <FormLabel>كرت الشاشة</FormLabel>
                         <Input
-                          name="systemRequirements.minimum.graphics"
+                          name="minimum.graphics"
                           value={formData.systemRequirements.minimum.graphics}
-                          onChange={handleInputChange}
-                          placeholder="مثال: NVIDIA GTX 760 / AMD Radeon R7 260x"
+                          onChange={(e) => handleInputChange({
+                            target: {
+                              name: 'systemRequirements',
+                              value: {
+                                ...formData.systemRequirements,
+                                minimum: {
+                                  ...formData.systemRequirements.minimum,
+                                  graphics: e.target.value
+                                }
+                              }
+                            }
+                          } as any)}
+                          placeholder="مثال: NVIDIA GTX 1060"
                         />
                       </FormControl>
-                      <FormControl>
+                      <FormControl isRequired>
                         <FormLabel>مساحة التخزين</FormLabel>
                         <Input
-                          name="systemRequirements.minimum.storage"
+                          name="minimum.storage"
                           value={formData.systemRequirements.minimum.storage}
-                          onChange={handleInputChange}
+                          onChange={(e) => handleInputChange({
+                            target: {
+                              name: 'systemRequirements',
+                              value: {
+                                ...formData.systemRequirements,
+                                minimum: {
+                                  ...formData.systemRequirements.minimum,
+                                  storage: e.target.value
+                                }
+                              }
+                            }
+                          } as any)}
                           placeholder="مثال: 50 GB"
                         />
                       </FormControl>
-                    </VStack>
+                    </SimpleGrid>
                   </Box>
 
-                  {/* Recommended Requirements */}
                   <Box>
-                    <Heading size="sm" mb={2}>الموصى به</Heading>
-                    <VStack spacing={4}>
+                    <Text fontWeight="bold" mb={2}>الموصى به</Text>
+                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                       <FormControl>
                         <FormLabel>نظام التشغيل</FormLabel>
                         <Input
-                          name="systemRequirements.recommended.os"
+                          name="recommended.os"
                           value={formData.systemRequirements.recommended.os}
-                          onChange={handleInputChange}
+                          onChange={(e) => handleInputChange({
+                            target: {
+                              name: 'systemRequirements',
+                              value: {
+                                ...formData.systemRequirements,
+                                recommended: {
+                                  ...formData.systemRequirements.recommended,
+                                  os: e.target.value
+                                }
+                              }
+                            }
+                          } as any)}
                           placeholder="مثال: Windows 11 64-bit"
                         />
                       </FormControl>
                       <FormControl>
                         <FormLabel>المعالج</FormLabel>
                         <Input
-                          name="systemRequirements.recommended.processor"
+                          name="recommended.processor"
                           value={formData.systemRequirements.recommended.processor}
-                          onChange={handleInputChange}
-                          placeholder="مثال: Intel Core i7-8700K / AMD Ryzen 5 3600X"
+                          onChange={(e) => handleInputChange({
+                            target: {
+                              name: 'systemRequirements',
+                              value: {
+                                ...formData.systemRequirements,
+                                recommended: {
+                                  ...formData.systemRequirements.recommended,
+                                  processor: e.target.value
+                                }
+                              }
+                            }
+                          } as any)}
+                          placeholder="مثال: Intel Core i7"
                         />
                       </FormControl>
                       <FormControl>
                         <FormLabel>الذاكرة</FormLabel>
                         <Input
-                          name="systemRequirements.recommended.memory"
+                          name="recommended.memory"
                           value={formData.systemRequirements.recommended.memory}
-                          onChange={handleInputChange}
+                          onChange={(e) => handleInputChange({
+                            target: {
+                              name: 'systemRequirements',
+                              value: {
+                                ...formData.systemRequirements,
+                                recommended: {
+                                  ...formData.systemRequirements.recommended,
+                                  memory: e.target.value
+                                }
+                              }
+                            }
+                          } as any)}
                           placeholder="مثال: 16 GB RAM"
                         />
                       </FormControl>
                       <FormControl>
                         <FormLabel>كرت الشاشة</FormLabel>
                         <Input
-                          name="systemRequirements.recommended.graphics"
+                          name="recommended.graphics"
                           value={formData.systemRequirements.recommended.graphics}
-                          onChange={handleInputChange}
-                          placeholder="مثال: NVIDIA RTX 3060 / AMD RX 6600 XT"
+                          onChange={(e) => handleInputChange({
+                            target: {
+                              name: 'systemRequirements',
+                              value: {
+                                ...formData.systemRequirements,
+                                recommended: {
+                                  ...formData.systemRequirements.recommended,
+                                  graphics: e.target.value
+                                }
+                              }
+                            }
+                          } as any)}
+                          placeholder="مثال: NVIDIA RTX 3060"
                         />
                       </FormControl>
                       <FormControl>
                         <FormLabel>مساحة التخزين</FormLabel>
                         <Input
-                          name="systemRequirements.recommended.storage"
+                          name="recommended.storage"
                           value={formData.systemRequirements.recommended.storage}
-                          onChange={handleInputChange}
-                          placeholder="مثال: 100 GB SSD"
+                          onChange={(e) => handleInputChange({
+                            target: {
+                              name: 'systemRequirements',
+                              value: {
+                                ...formData.systemRequirements,
+                                recommended: {
+                                  ...formData.systemRequirements.recommended,
+                                  storage: e.target.value
+                                }
+                              }
+                            }
+                          } as any)}
+                          placeholder="مثال: 100 GB"
                         />
                       </FormControl>
-                    </VStack>
+                    </SimpleGrid>
                   </Box>
-                </SimpleGrid>
+                </VStack>
               </Box>
 
               <Button
                 type="submit"
-                colorScheme="green"
+                colorScheme="blue"
                 size="lg"
+                w="full"
                 isLoading={loading}
-                loadingText="جاري النشر..."
               >
                 نشر اللعبة
               </Button>
             </VStack>
           </Box>
-        </VStack>
+        </Box>
       </Container>
     </MainLayout>
   );
