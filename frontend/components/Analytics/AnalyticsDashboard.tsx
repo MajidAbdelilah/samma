@@ -24,7 +24,6 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ games }) => {
     stats,
     salesData,
     ratingData,
-    downloadData,
     topGames,
     isLoading,
     error,
@@ -70,20 +69,21 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ games }) => {
           <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4}>
             <StatCard
               label="إجمالي الإيرادات"
-              value={stats?.totalRevenue || 0}
+              value={stats?.total_revenue || 0}
               format={formatCurrency}
             />
             <StatCard
               label="إجمالي المبيعات"
-              value={stats?.totalSales || 0}
+              value={stats?.total_sales || 0}
             />
             <StatCard
               label="متوسط التقييم"
-              value={stats?.averageRating.toFixed(1) || '0.0'}
+              value={stats?.average_rating ? Number(stats.average_rating).toFixed(1) : '0.0'}
             />
             <StatCard
-              label="إجمالي التحميلات"
-              value={stats?.totalDownloads || 0}
+              label="عمولة المنصة"
+              value={stats?.platform_fees || 0}
+              format={formatCurrency}
             />
           </SimpleGrid>
 
@@ -117,10 +117,13 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ games }) => {
             </Box>
           </SimpleGrid>
 
-          <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6}>
+          <Box>
+            <Heading size="md" mb={4}>
+              التقييمات
+            </Heading>
             <AnalyticsChart
-              title="التقييمات والتحميلات"
-              labels={ratingData.map((d) => d.date)}
+              title="التقييمات"
+              labels={ratingData.map((d) => d.title)}
               datasets={[
                 {
                   label: 'التقييم',
@@ -128,19 +131,22 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ games }) => {
                   borderColor: 'yellow.500',
                 },
                 {
-                  label: 'التحميلات',
-                  data: downloadData.map((d) => d.downloads),
+                  label: 'عدد التقييمات',
+                  data: ratingData.map((d) => d.total_ratings),
                   borderColor: 'purple.500',
                 },
               ]}
             />
-          </SimpleGrid>
+          </Box>
 
           <Box>
             <Heading size="md" mb={4}>
               أداء الألعاب
             </Heading>
-            <GamePerformanceTable games={topGames} />
+            <GamePerformanceTable games={topGames.map(game => ({
+              ...game,
+              downloads: game.sales // Use sales as downloads since we don't track downloads separately
+            }))} />
           </Box>
         </>
       )}

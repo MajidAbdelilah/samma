@@ -27,6 +27,7 @@ api_patterns = [
     path('games/', include('games.urls.api', namespace='games')),
     path('payments/', include('payments.urls.api', namespace='payments')),
     path('core/', include('core.urls.api', namespace='core')),
+    path('analytics/', include('analytics.urls', namespace='analytics')),
 ]
 
 # Frontend URLs (with i18n support)

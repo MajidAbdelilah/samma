@@ -25,4 +25,5 @@ urlpatterns = [
     path('top-games/', TopGamesAPIView.as_view(), name='top-games'),
     path('statistics/<int:pk>/', GameStatisticsAPIView.as_view(), name='game-statistics'),
     path('update-bid/<int:pk>/', UpdateGameBidAPIView.as_view(), name='update-game-bid'),
+    path('my-games/', GameViewSet.as_view({'get': 'my_games'}), name='my-games'),
 ] 

@@ -3,7 +3,6 @@ import {
   UserStats,
   SalesData,
   RatingData,
-  DownloadData,
   GameStats,
   AnalyticsFilter,
 } from '../types/analytics';
@@ -12,7 +11,6 @@ interface UseAnalyticsResult {
   stats: UserStats | null;
   salesData: SalesData[];
   ratingData: RatingData[];
-  downloadData: DownloadData[];
   topGames: GameStats[];
   isLoading: boolean;
   error: string | null;
@@ -23,7 +21,6 @@ export const useAnalytics = (): UseAnalyticsResult => {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [salesData, setSalesData] = useState<SalesData[]>([]);
   const [ratingData, setRatingData] = useState<RatingData[]>([]);
-  const [downloadData, setDownloadData] = useState<DownloadData[]>([]);
   const [topGames, setTopGames] = useState<GameStats[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +40,7 @@ export const useAnalytics = (): UseAnalyticsResult => {
       });
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/analytics?${params.toString()}`
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/analytics?${params.toString()}`
       );
 
       if (!response.ok) throw new Error('Failed to fetch analytics data');
@@ -52,7 +49,6 @@ export const useAnalytics = (): UseAnalyticsResult => {
       setStats(data.stats);
       setSalesData(data.salesData);
       setRatingData(data.ratingData);
-      setDownloadData(data.downloadData);
       setTopGames(data.topGames);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred');
@@ -65,7 +61,6 @@ export const useAnalytics = (): UseAnalyticsResult => {
     stats,
     salesData,
     ratingData,
-    downloadData,
     topGames,
     isLoading,
     error,

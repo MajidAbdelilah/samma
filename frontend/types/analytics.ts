@@ -1,9 +1,10 @@
 export interface UserStats {
-  totalGames: number;
-  totalSales: number;
-  totalRevenue: number;
-  averageRating: number;
-  totalDownloads: number;
+  total_sales: number;
+  total_revenue: number;
+  platform_fees: number;
+  seller_earnings: number;
+  total_games: number;
+  average_rating: number;
 }
 
 export interface SalesData {
@@ -13,9 +14,9 @@ export interface SalesData {
 }
 
 export interface RatingData {
-  date: string;
+  title: string;
   rating: number;
-  count: number;
+  total_ratings: number;
 }
 
 export interface DownloadData {
@@ -29,7 +30,6 @@ export interface GameStats {
   revenue: number;
   sales: number;
   rating: number;
-  downloads: number;
 }
 
 export interface AnalyticsPeriod {

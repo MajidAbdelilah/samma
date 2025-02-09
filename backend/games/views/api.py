@@ -119,6 +119,15 @@ class GameViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(seller=self.request.user)
 
+    @action(detail=False, methods=['get'], url_path='my-games', url_name='my_games', permission_classes=[IsAuthenticated])
+    def my_games(self, request):
+        """
+        List games owned by the current user
+        """
+        queryset = Game.objects.filter(seller=request.user, is_active=True)
+        serializer = GameListSerializer(queryset, many=True)
+        return Response(serializer.data)
+
     @action(detail=True, methods=['post'])
     def approve(self, request, slug=None):
         """

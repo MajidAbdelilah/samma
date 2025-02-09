@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'games.apps.GamesConfig',
     'payments.apps.PaymentsConfig',
     'core.apps.CoreConfig',
+    'analytics.apps.AnalyticsConfig',
 ]
 
 MIDDLEWARE = [
