@@ -37,7 +37,9 @@ const GameDetailPage = () => {
   const { isAuthenticated, user } = useAuth();
   const toast = useToast();
   const [game, setGame] = useState<Game | null>(null);
+  const [versions, setVersions] = useState<GameVersion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingVersions, setLoadingVersions] = useState(false);
 
   const api = createApi((message) => {
     toast({
@@ -56,7 +58,27 @@ const GameDetailPage = () => {
       try {
         const { data, error } = await api.get<Game>(`/games/${slug}/`);
         if (error) throw new Error(error.message);
-        if (data) setGame(data);
+        if (data) {
+          setGame(data);
+          // Fetch versions after getting game data
+          setLoadingVersions(true);
+          try {
+            const { data: versionsData, error: versionsError } = await api.get<{ results: GameVersion[] }>(`/games/${data.id}/versions/`);
+            if (versionsError) throw new Error(versionsError.message);
+            if (versionsData?.results) setVersions(versionsData.results);
+          } catch (err) {
+            console.error('Error fetching versions:', err);
+            toast({
+              title: 'Error',
+              description: 'Failed to load game versions',
+              status: 'error',
+              duration: 5000,
+              isClosable: true,
+            });
+          } finally {
+            setLoadingVersions(false);
+          }
+        }
       } catch (err) {
         console.error('Error fetching game:', err);
         toast({
@@ -177,7 +199,19 @@ const GameDetailPage = () => {
 
                   {isOwner && (
                     <TabPanel>
-                      <GameVersions gameId={game.id} />
+                      {loadingVersions ? (
+                        <Center py={8}>
+                          <Spinner size="lg" />
+                        </Center>
+                      ) : (
+                        <GameVersions
+                          gameId={game.id}
+                          versions={versions}
+                          onVersionDelete={(versionId) => {
+                            setVersions(prev => prev.filter(v => v.id !== versionId));
+                          }}
+                        />
+                      )}
                     </TabPanel>
                   )}
                 </TabPanels>

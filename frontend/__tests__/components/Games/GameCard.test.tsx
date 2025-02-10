@@ -12,14 +12,25 @@ jest.mock('next/router', () => ({
 
 describe('GameCard', () => {
   const mockGame = {
-    id: '123',
+    id: 123,
     title: 'Test Game',
+    slug: 'test-game',
+    description: 'A test game description',
     price: 29.99,
-    rating: 8.5,
-    commentCount: 42,
-    thumbnailUrl: '/images/test-game.jpg',
-    bidPercentage: 7.5,
-    categories: ['action', 'adventure'],
+    rating: 4.5,
+    total_ratings: 42,
+    thumbnail: '/images/test-game.jpg',
+    category: {
+      id: 1,
+      name: 'Action',
+      slug: 'action'
+    },
+    seller: {
+      id: 1,
+      username: 'testuser',
+      email: 'test@example.com'
+    },
+    created_at: '2025-02-10T18:00:00Z'
   };
 
   const mockRouter = {
@@ -39,22 +50,20 @@ describe('GameCard', () => {
     );
 
     expect(screen.getByText(mockGame.title)).toBeInTheDocument();
-    expect(screen.getByText(`${mockGame.rating.toFixed(1)}/10`)).toBeInTheDocument();
-    expect(screen.getByText(mockGame.commentCount.toString())).toBeInTheDocument();
-    expect(screen.getByText(`$${mockGame.price}`)).toBeInTheDocument();
-    expect(screen.getByText(`نسبة العمولة: ${mockGame.bidPercentage}%`)).toBeInTheDocument();
+    expect(screen.getByText(mockGame.rating.toFixed(1))).toBeInTheDocument();
+    expect(screen.getByText(`(${mockGame.total_ratings})`)).toBeInTheDocument();
+    expect(screen.getByText(`$${mockGame.price.toFixed(2)}`)).toBeInTheDocument();
+    expect(screen.getByText(mockGame.category.name)).toBeInTheDocument();
+    expect(screen.getByText(`By ${mockGame.seller.username}`)).toBeInTheDocument();
   });
 
-  it('displays game categories', () => {
+  it('displays game category', () => {
     render(
       <ChakraProvider>
         <GameCard game={mockGame} />
       </ChakraProvider>
     );
-
-    mockGame.categories.forEach(category => {
-      expect(screen.getByText(category)).toBeInTheDocument();
-    });
+    expect(screen.getByText(mockGame.category.name)).toBeInTheDocument();
   });
 
   it('links to game details page', () => {
@@ -65,7 +74,7 @@ describe('GameCard', () => {
     );
 
     const link = screen.getByRole('link');
-    expect(link).toHaveAttribute('href', `/games/${mockGame.id}`);
+    expect(link).toHaveAttribute('href', `/games/${mockGame.slug}`);
   });
 
   it('displays game thumbnail', () => {
@@ -76,24 +85,22 @@ describe('GameCard', () => {
     );
 
     const thumbnail = screen.getByRole('img');
-    expect(thumbnail).toHaveAttribute('src', mockGame.thumbnailUrl);
+    expect(thumbnail).toHaveAttribute('src', mockGame.thumbnail);
     expect(thumbnail).toHaveAttribute('alt', mockGame.title);
   });
 
-  it('shows bid percentage indicator', () => {
+  it('shows seller name', () => {
     render(
       <ChakraProvider>
         <GameCard game={mockGame} />
       </ChakraProvider>
     );
 
-    const bidIndicator = screen.getByText(`نسبة العمولة: ${mockGame.bidPercentage}%`);
-    expect(bidIndicator).toBeInTheDocument();
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', mockGame.bidPercentage.toString());
+    expect(screen.getByText(`By ${mockGame.seller.username}`)).toBeInTheDocument();
   });
 
   it('handles missing thumbnail gracefully', () => {
-    const gameWithoutThumbnail = { ...mockGame, thumbnailUrl: '' };
+    const gameWithoutThumbnail = { ...mockGame, thumbnail: '' };
     render(
       <ChakraProvider>
         <GameCard game={gameWithoutThumbnail} />
@@ -101,7 +108,7 @@ describe('GameCard', () => {
     );
 
     const fallbackImage = screen.getByRole('img');
-    expect(fallbackImage).toHaveAttribute('src', '');
+    expect(fallbackImage).toHaveAttribute('src', '/images/default-game-thumbnail.svg');
   });
 
   it('truncates long titles', () => {

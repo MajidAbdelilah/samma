@@ -54,11 +54,13 @@ const GameList: React.FC = () => {
       if (response.error) {
         throw new Error(response.error.message);
       }
-      if (response.data?.results) {
-        setCategories(response.data.results);
+      if (!response.data) {
+        throw new Error('No data received from server');
       }
+      setCategories(response.data.results);
     } catch (err) {
       console.error('Failed to fetch categories:', err);
+      throw err;
     }
   };
 
@@ -66,17 +68,23 @@ const GameList: React.FC = () => {
     try {
       setLoading(true);
       const endpoint = activeTab === 1 ? '/games/my-games/' : '/games/';
-      const { data, error } = await api.get<{ results: Game[]; next: string | null }>(endpoint);
+      const response = await api.get<{ results: Game[]; next: string | null }>(endpoint);
       
-      if (error) {
-        throw new Error(error.message);
+      if (response.error) {
+        throw new Error(response.error.message);
       }
       
-      setGames(data?.results || []);
-      setNextPage(data?.next || null);
+      if (!response.data) {
+        throw new Error('No data received from server');
+      }
+
+      setGames(response.data.results);
+      setNextPage(response.data.next);
+      setError(null);
     } catch (err) {
       console.error('Error fetching games:', err);
       setError(err instanceof Error ? err.message : 'Failed to load games');
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -115,12 +123,15 @@ const GameList: React.FC = () => {
   const filteredGames = games
     .filter(game => {
       // Filter by category if selected
-      if (category !== 'all' && game.category.slug !== category) {
-        return false;
+      if (category !== 'all') {
+        // If game has no category and we're filtering by category, exclude it
+        if (!game.category) return false;
+        // If game category doesn't match selected category, exclude it
+        if (game.category.slug !== category) return false;
       }
       
       // Filter by tab (All Games vs My Games)
-      if (activeTab === 1 && user) {
+      if (activeTab === 1 && user && game.seller) {
         return game.seller.id === user.id; // Show only user's games in My Games tab
       }
       return true;
@@ -209,9 +220,11 @@ const GameList: React.FC = () => {
         </Text>
       ) : (
         <>
-          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6} as="ul" role="list">
             {filteredGames.map(game => (
-              <GameCard key={game.id} game={game} />
+              <Box as="li" key={game.id} role="listitem" data-testid="game-card">
+                <GameCard game={game} />
+              </Box>
             ))}
           </SimpleGrid>
 

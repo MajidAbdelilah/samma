@@ -154,7 +154,12 @@ class Game(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.title)
+            base_slug = slugify(self.title)
+            self.slug = base_slug
+            n = 1
+            while Game.objects.filter(slug=self.slug).exclude(id=self.id).exists():
+                self.slug = f"{base_slug}-{n}"
+                n += 1
         super().save(*args, **kwargs)
 
 

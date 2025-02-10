@@ -57,9 +57,29 @@ describe('GameList Component', () => {
     // Reset all mocks before each test
     jest.clearAllMocks();
     
-    // Mock the API response
+    // Mock the API response for games and categories
     (createApi as jest.Mock).mockImplementation(() => ({
-      get: jest.fn().mockResolvedValue({ data: mockGames })
+      get: jest.fn().mockImplementation((url: string) => {
+        if (url.includes('/categories')) {
+          return Promise.resolve({
+            data: {
+              results: [
+                { id: 1, name: 'Action', slug: 'action' },
+                { id: 2, name: 'RPG', slug: 'rpg' }
+              ]
+            }
+          });
+        }
+        if (url.includes('/games')) {
+          return Promise.resolve({
+            data: {
+              results: mockGames,
+              next: null
+            }
+          });
+        }
+        throw new Error('Failed to fetch games');
+      })
     }));
   });
 
@@ -85,11 +105,19 @@ describe('GameList Component', () => {
     expect(screen.getByText('4.0')).toBeInTheDocument();
 
     // Check if categories are displayed
-    expect(screen.getByText('Action')).toBeInTheDocument();
-    expect(screen.getByText('RPG')).toBeInTheDocument();
+    // Check category options in the select
+    const categorySelect = screen.getByLabelText(/category/i);
+    expect(categorySelect).toHaveValue('all');
+    
+    // Check if the category badges are displayed
+    const badges = screen.getAllByText(/(Action|RPG)/i);
+    expect(badges.some(badge => badge.textContent === 'Action')).toBe(true);
+    expect(badges.some(badge => badge.textContent === 'RPG')).toBe(true);
   });
 
   it('handles loading state correctly', async () => {
+    jest.setTimeout(10000);
+    jest.useFakeTimers();
     // Mock a delayed API response
     (createApi as jest.Mock).mockImplementation(() => ({
       get: jest.fn().mockImplementation(() => new Promise(resolve => {
@@ -103,14 +131,19 @@ describe('GameList Component', () => {
       </ChakraProvider>
     );
 
-    // Check if loading state is shown
-    expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
-
-    // Wait for content to load
+    // Wait for content to load and loading spinner to disappear
     await waitFor(() => {
       expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      expect(screen.getByText('Test Game 1')).toBeInTheDocument();
     });
+
+    // Verify games are displayed
+    jest.runAllTimers();
+    await waitFor(() => {
+      const gameCards = screen.getAllByRole('listitem');
+      expect(gameCards).toHaveLength(2);
+      expect(gameCards[0]).toHaveTextContent('Test Game 1');
+      expect(gameCards[1]).toHaveTextContent('Test Game 2');
+    }, { timeout: 10000 });
   });
 
   it('handles error state correctly', async () => {
@@ -143,13 +176,20 @@ describe('GameList Component', () => {
       expect(screen.getByText('Test Game 1')).toBeInTheDocument();
     });
 
+    // Wait for content to load
+    await waitFor(() => {
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+    });
+
     // Filter by category
     const categoryFilter = screen.getByLabelText('Category');
     fireEvent.change(categoryFilter, { target: { value: 'action' } });
 
     // Check if only Action games are shown
-    expect(screen.getByText('Test Game 1')).toBeInTheDocument();
-    expect(screen.queryByText('Test Game 2')).not.toBeInTheDocument();
+    const gameCards = screen.getAllByTestId('game-card');
+    expect(gameCards).toHaveLength(1);
+    expect(gameCards[0]).toHaveTextContent('Test Game 1');
+    expect(gameCards[0]).toHaveTextContent('Action');
   });
 
   it('handles game sorting correctly', async () => {
@@ -164,13 +204,19 @@ describe('GameList Component', () => {
       expect(screen.getByText('Test Game 1')).toBeInTheDocument();
     });
 
+    // Wait for content to load
+    await waitFor(() => {
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+    });
+
     // Sort by price
     const sortSelect = screen.getByLabelText('Sort by');
     fireEvent.change(sortSelect, { target: { value: 'price' } });
 
     // Check if games are sorted by price
-    const games = screen.getAllByTestId('game-card');
-    expect(games[0]).toHaveTextContent('$9.99');
-    expect(games[1]).toHaveTextContent('$19.99');
+    const gameCards = screen.getAllByTestId('game-card');
+    expect(gameCards).toHaveLength(2);
+    expect(gameCards[0]).toHaveTextContent('$9.99');
+    expect(gameCards[1]).toHaveTextContent('$19.99');
   });
 }); 

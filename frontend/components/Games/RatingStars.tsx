@@ -28,6 +28,8 @@ const RatingStars: React.FC<RatingStarsProps> = ({
         color="yellow.400"
         w={`${size}px`}
         h={`${size}px`}
+        data-testid="star-icon"
+        aria-label="full star"
       />
     );
   }
@@ -41,6 +43,8 @@ const RatingStars: React.FC<RatingStarsProps> = ({
         color="yellow.400"
         w={`${size}px`}
         h={`${size}px`}
+        data-testid="star-icon"
+        aria-label="half star"
       />
     );
   }
@@ -54,6 +58,8 @@ const RatingStars: React.FC<RatingStarsProps> = ({
         color="yellow.400"
         w={`${size}px`}
         h={`${size}px`}
+        data-testid="star-icon"
+        aria-label="empty star"
       />
     );
   }

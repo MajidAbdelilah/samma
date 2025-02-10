@@ -213,15 +213,15 @@ const GameCreateForm: React.FC = () => {
       // Add system requirements
       formDataToSend.append('system_requirements', JSON.stringify(formData.system_requirements));
 
-      const { data, error } = await api.post<GameResponse>('/games/', formDataToSend);
+      const { data, error } = await api.post<{ id: number; slug: string }>('/games/', formDataToSend);
 
       if (error) {
         console.error('Error response:', error);
         throw new Error(error.message || 'Failed to create game');
       }
 
-      if (!data) {
-        throw new Error('No data received from server');
+      if (!data || !data.slug) {
+        throw new Error('No data or slug received from server');
       }
 
       toast({
@@ -232,6 +232,8 @@ const GameCreateForm: React.FC = () => {
         isClosable: true,
       });
 
+      // Wait a short moment to ensure the game is properly created
+      await new Promise(resolve => setTimeout(resolve, 500));
       router.push(`/games/${data.slug}`);
     } catch (error) {
       console.error('Error creating game:', error);

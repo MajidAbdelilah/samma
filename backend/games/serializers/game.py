@@ -127,7 +127,9 @@ class GameCreateSerializer(serializers.ModelSerializer):
             'game_file',
             'version',
             'system_requirements',
+            'slug',  # Add slug to response fields
         ]
+        read_only_fields = ['slug']  # Make sure slug is read-only
 
     def validate_system_requirements(self, value):
         """
